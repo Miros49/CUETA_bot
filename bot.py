@@ -1,0 +1,26 @@
+import asyncio
+import logging
+
+from aiogram import Dispatcher
+from core import dp, bot
+
+from database import db
+from handlers import user_handlers, admin_handlers
+
+
+logging.basicConfig(level=logging.INFO)
+
+
+async def main() -> None:
+    await db.create_tables()
+
+    dp.include_router(user_handlers.router)
+    dp.include_router(admin_handlers.router)
+
+    await bot.delete_webhook(drop_pending_updates=False)
+
+    await dp.start_polling(bot)
+
+
+if __name__ == '__main__':
+    asyncio.run(main())
