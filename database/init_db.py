@@ -1,20 +1,18 @@
 import psycopg2
-from psycopg2.extras import
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from sqlalchemy import create_engine
 
 from db_models import Base
-from core import config
+from core import config, DATABASE_URL
 
 
 def create_database():
-    try:
-        connection = psycopg2.connect(user="postgres", password=config.database.password)
-        connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = connection.cursor()
+    connection = psycopg2.connect(user="postgres", password=config.database.password)
+    connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cursor = connection.cursor()
 
-        # Создание базы данных
-        cursor.execute('CREATE DATABASE team_admin')
+    try:
+        cursor.execute('CREATE DATABASE cueta_database')  # Создание базы данных
         print("База данных создана.")
     except psycopg2.errors.DuplicateDatabase:
         print("База данных уже существует.")
