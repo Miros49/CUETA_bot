@@ -1,189 +1,214 @@
 from aiogram import Router, F
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import StateFilter, CommandStart
 from aiogram.fsm.context import FSMContext
 
-from core import config
+from core import bot
 from database import db
 from keyboards import UserKeyboards
-from lexicon import *
+from lexicon import LEXICON, buttons, callbacks, other
 from states import UserState
-from utils import *
+from utils import validate_and_format_phone_number
 
 router: Router = Router()
-kb = UserKeyboards()
+kb: UserKeyboards = UserKeyboards()
 
 
 @router.message(CommandStart())
-async def start(message: Message, state: FSMContext):
-    await message.answer('Салам')
+async def start(message: Message):
+    if not await db.user_exists(message.from_user.id):
+        await db.init_user(message.from_user.id, message.from_user.username)
+
+    await message.answer(LEXICON['start'], reply_markup=kb.start())
 
 
-@router.callback_query(F.data == callbacks[buttons['back']])
-async def back_to_menu(callback: CallbackQuery, state: FSMContext):
-    current_state = await state.get_state()
-    if not current_state or current_state == UserState.enter_nickname:
-        if callback.message.text == LEXICON_RU['select_generator']:
-            await callback.message.edit_text(LEXICON_RU['tools_for_work'], reply_markup=kb.options)
-        elif callback.message.text == LEXICON_RU['enter_promo']:
-            text = LEXICON_RU['your_promo']
-            user = await db.get_promocodes(callback.from_user.id)
-            if not user or not user.promocodes:
-                if not user:
-                    await db.set_user_promocodes(callback.from_user.id)
-                text += 'У Вас ещё нет промокодов'
-            elif user.promocodes:
-                text += '▪️<code>' + '</code>\n▪️<code>'.join(user.promocodes.split(',')) + '</code>'
+@router.callback_query(F.data == callbacks[buttons['upcoming_events']])
+async def start_button_handler(callback: CallbackQuery):
+    events: list[dict] = await db.get_all_events()
 
-            await callback.message.edit_text(text, reply_markup=kb.promo, parse_mode='HTML')
-        elif callback.message.text == '🔥 CREO:':
-            await callback.message.edit_text(LEXICON_RU['select_generator'], reply_markup=kb.generators())
-        elif callback.message.text == LEXICON_RU['promo_type']:
-            text = LEXICON_RU['your_promo']
-            user = await db.get_promocodes(callback.from_user.id)
-            if not user or not user.promocodes:
-                if not user:
-                    await db.set_user_promocodes(callback.from_user.id)
-                text += 'У Вас ещё нет промокодов'
-            elif user.promocodes:
-                text += '▪️<code>' + '</code>\n▪️<code>'.join(user.promocodes.split(',')) + '</code>'
+    if not events:
+        return await callback.message.edit_text(LEXICON['no_upcoming_events'], reply_markup=kb.notifications_on())
 
-            await callback.message.edit_text(text, reply_markup=kb.promo, parse_mode='HTML')
-        elif callback.message.text == LEXICON_RU['promo_ticker']:
-            await callback.message.edit_text(LEXICON_RU['promo_type'], reply_markup=kb.create_promo)
-        else:
-            user = await db.get_user(callback.from_user.id)
-            wallets = await db.get_wallets(callback.from_user.id)
-            await callback.message.edit_text(LEXICON_RU['profile'].format(
-                user_id=callback.from_user.id,
-                nickname=f"<code>{user.nickname}</code>" if user and user.nickname else 'Нет',
-                lolz=user.lolz_profile if user.lolz_profile else 'Нет профиля',
-                tutor='Отсутствует',
-                status=user.status,
-                current_balance=str(user.balance),
-                total_turnover=str(user.total_turnover),
-                percent=str(await get_percent(user.total_turnover)),
-                users_count=user.users_count,
-                btc=f"<code>{wallets.btc}</code>" if wallets and wallets.btc else 'Не привязан',
-                eth=f"<code>{wallets.eth}</code>" if wallets and wallets.eth else 'Не привязан',
-                trc20=f"<code>{wallets.trc20}</code>" if wallets and wallets.trc20 else 'Не привязан',
-                tron=f"<code>{wallets.trx}</code>" if wallets and wallets.trx else 'Не привязан'
-            ), reply_markup=kb.profile_kb(), parse_mode='HTML')
-    elif current_state == UserState.generate_tags:
-        await callback.message.edit_text(LEXICON_RU['select_generator'], reply_markup=kb.generators())
-    elif current_state == UserState.enter_promo:
-        await callback.message.edit_text(LEXICON_RU['your_promo'], reply_markup=kb.promo)
-    elif current_state == UserState.enter_payout_amount:
-        linked_wallets = await db.get_linked_wallets(callback.from_user.id)
-        await callback.message.edit_text(LEXICON_RU['choose_wallet_for_payout'],
-                                         reply_markup=kb.walets_for_payout(linked_wallets))
-    await state.clear()
+    await callback.message.edit_text(LEXICON['events_list'], reply_markup=kb.events_list(events))
 
 
-@router.message(F.text == buttons['profile'])
-async def profile(message: Message):
-    user = await db.get_user(message.from_user.id)
-    wallets = await db.get_wallets(message.from_user.id)
-    await message.answer(LEXICON_RU['profile'].format(
-        user_id=message.from_user.id,
-        nickname=f"<code>{user.nickname}</code>" if user and user.nickname else 'Нет',
-        lolz=user.lolz_profile if user.lolz_profile else 'Нет профиля',
-        tutor='Отсутствует',
-        status=user.status,
-        current_balance=str(user.balance),
-        total_turnover=str(user.total_turnover),
-        percent=str(await get_percent(user.total_turnover)),
-        users_count=user.users_count,
-        btc=f"<code>{wallets.btc}</code>" if wallets and wallets.btc else 'Не привязан',
-        eth=f"<code>{wallets.eth}</code>" if wallets and wallets.eth else 'Не привязан',
-        trc20=f"<code>{wallets.trc20}</code>" if wallets and wallets.trc20 else 'Не привязан',
-        tron=f"<code>{wallets.trx}</code>" if wallets and wallets.trx else 'Не привязан'
-    ), reply_markup=kb.profile_kb(), parse_mode='HTML')
+@router.callback_query(F.data.startswith('event_info'))
+async def event_info_handler(callback: CallbackQuery):
+    event = await db.get_event(callback.data.split('_')[-1])
+
+    await callback.message.edit_text(
+        text=LEXICON['event_info'].format(event.name, event.description, event.date),
+        reply_markup=kb.register(event.id)  # TODO: добавить кнопку "назад"
+    )
 
 
-@router.callback_query(F.data == callbacks['🆙 Повысить лимиты'])
-async def profile_menu(callback: CallbackQuery):
-    await callback.answer()
-    await callback.message.answer(LEXICON_RU['dev'])
+@router.callback_query(F.data.startswith('register_for_the_event'))
+async def register_for_the_event_handler(callback: CallbackQuery, state: FSMContext):
+    user = await db.get_user(callback.from_user.id)
+    event_id = callback.data.split('_')[-1]
+    event = await db.get_event(event_id)
+
+    if not user.date_of_birth:
+        message = await callback.message.edit_text(LEXICON['you_need_to_sign_in'])  # TODO: кнопка отмены ведёт в меню
+
+        await state.set_state(UserState.sign_in_enter_name)
+        return await state.update_data(registration_message_id=message.message_id, registration_to_event=event_id)
+
+    # TODO: логика регистрации
+
+    await callback.message.edit_text(
+        text=LEXICON['registration_to_event_confirmed'].format(event.name, event.date)
+    )  # TODO: добавить кнопку включить уведы если их нет
 
 
-@router.callback_query(F.data == callbacks['📝 Изменить информацию'])
-async def profile_menu(callback: CallbackQuery):
-    await callback.answer()
-    await callback.message.answer(LEXICON_RU['dev'])
-
-
-@router.callback_query(F.data == callbacks[buttons['link_wallet']])
-async def profile_menu(callback: CallbackQuery):
-    await callback.message.edit_text(LEXICON_RU['choose_wallet'], reply_markup=kb.wallets())
-
-
-@router.callback_query(F.data.startswith('wallet'))
-async def enter_wallet(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    wallet = callback.data.split('_')[1]
-    await callback.message.edit_text(LEXICON_RU['enter_wallet'].format(wallet.upper()))
-    await state.set_state(UserState.enter_wallet)
-    await state.update_data({'wallet': wallet})
-
-
-@router.message(StateFilter(UserState.enter_wallet))
-async def enter_wallet(message: Message, state: FSMContext):
+@router.message(StateFilter(UserState.sign_in_enter_name))
+async def sign_in_enter_name_handler(message: Message, state: FSMContext):
     data = await state.get_data()
-    if await db.wallet_exists(message.from_user.id):
-        await db.add_wallet(message.from_user.id, {data['wallet']: message.text})
-    else:
-        await db.set_wallet(message.from_user.id)
-        await db.add_wallet(message.from_user.id, {data['wallet']: message.text})
-    await message.answer(f"кошелёк {data['wallet'].upper()} установлен")
+
+    await message.delete()
+
+    name = message.text
+    if len(name.split()) != 3:  # TODO: сделать норм систему проверки правильности
+        try:
+            return await bot.edit_message_text(
+                chat_id=message.chat.id, message_id=data['registration_message_id'],
+                text='Неверный формат ввода имени. Попробуйте ещё раз'
+            )  # TODO: кнопка назад на предыдущий этап
+        except TelegramBadRequest:
+            pass
+
+    await bot.edit_message_text(
+        chat_id=message.chat.id, message_id=data['registration_message_id'],
+        text=LEXICON['sign_in_enter_date_of_birth'].format(name.split()[1])
+    )  # TODO: кнопку на предыдущий этап
+
+    await state.set_state(UserState.sign_in_enter_date_of_birth)
+    await state.update_data(name=name)
+
+
+@router.message(StateFilter(UserState.sign_in_enter_date_of_birth))
+async def sign_in_enter_date_of_birth_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    date_of_birth = message.text
+    if not date_of_birth:  # TODO: сюда тоже функцию проверки правильности даты (все подобные выносить в /utils/)
+        pass
+
+    await bot.edit_message_text(
+        chat_id=message.chat.id, message_id=data['registration_message_id'],
+        text=LEXICON['sign_in_enter_status']
+    )  # TODO: кнопку на предыдущий этап
+
+    await state.set_state(UserState.sign_in_enter_status)
+    await state.update_data(date_of_birth=date_of_birth)
+
+
+@router.message(StateFilter(UserState.sign_in_enter_status))
+async def sign_in_enter_status_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    if message.text not in other['statuses']:
+        try:
+            return await bot.edit_message_text(
+                chat_id=message.chat.id, message_id=data['registration_message_id'],
+                text=LEXICON['sign_in_enter_status_again']
+            )  # TODO: кнопку на предыдущий этап
+        except TelegramBadRequest:
+            pass
+
+    await bot.edit_message_text(
+        chat_id=message.chat.id, message_id=data['registration_message_id'],
+        text=LEXICON['sign_in_enter_phone_number']
+    )  # TODO: кнопку на предыдущий этап
+
+    additional_message = await message.answer(
+        text=LEXICON['sign_in_enter_phone_number_additional'],
+        reply_markup=kb.request_phone_number()
+    )
+
+    await state.set_state(UserState.sign_in_enter_phone_number)
+    await state.update_data(status=message.text, registration_additional_message_id=additional_message.message_id)
+
+
+@router.message(StateFilter(UserState.sign_in_enter_phone_number))
+async def sign_in_enter_status_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    phone_number = validate_and_format_phone_number(message.contact.phone_number if message.contact else message.text)
+
+    if not phone_number['valid']:
+        try:
+            await bot.edit_message_text(
+                chat_id=message.chat.id, message_id=data['registration_message_id'],
+                text=LEXICON['sign_in_enter_phone_number_again'].format(phone_number['reason'])
+            )  # TODO: кнопка назад на предыдущий этап
+        except TelegramBadRequest:
+            pass
+
+    await bot.delete_message(message.chat.id, data['registration_additional_message_id'])
+    await bot.edit_message_text(
+        chat_id=message.chat.id, message_id=data['registration_message_id'],
+        text=LEXICON['sign_in_confirmation'].format(
+            data['name'], data['date_of_birth'], data['status'], phone_number['formatted']
+        ), reply_markup=kb.confirm_registration()
+    )
+
     await state.clear()
+    await state.update_data(phone_number=phone_number['formatted'])
 
 
-@router.callback_query(F.data == callbacks['💸 Запросить выплату'])
-async def choose_wallet_for_payout(callback: CallbackQuery):
-    await callback.answer()
-    user = await db.get_user(callback.from_user.id)
-    linked_wallets = await db.get_linked_wallets(callback.from_user.id)
+@router.callback_query(
+    F.data.in_([callbacks[buttons['confirm_registration']], callbacks[buttons['cancel_registration']]])
+)
+async def confirm_registration_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
 
-    if not user:
-        await db.set_wallet(callback.from_user.id)
-    if not user.balance:
-        await callback.message.answer(LEXICON_RU['no_money'])
-        if callback.from_user.id in config.tg_bot.admin_ids:
-            await callback.message.answer('Поскольку Вы являетесь администратором, в целях тестирования Вам доступна'
-                                          'команда <code>/add n</code> для зачисления на баланс n денег',
-                                          parse_mode='HTML')
-    elif linked_wallets:
-        await callback.message.edit_text(LEXICON_RU['choose_wallet_for_payout'],
-                                         reply_markup=kb.walets_for_payout(linked_wallets))
-    else:
-        await callback.message.answer(LEXICON_RU['no_wallets'])
-        await callback.answer()
+    if callback.data.split('_')[-1] == 'canceled':
+        return await callback.message.edit_text('Регистрация отменена')
 
-
-@router.callback_query(F.data.startswith('payout'))
-async def enter_payout_amount(callback: CallbackQuery, state: FSMContext):
-    await callback.answer()
-    user = await db.get_user(callback.from_user.id)
-    mes = await callback.message.edit_text(
-        LEXICON_RU['payout_amount'].format(balance=str(user.balance)),
-        reply_markup=kb.back(),
-        parse_mode='HTML')
-    await state.set_state(UserState.enter_payout_amount)
-    await state.update_data({"wallet_type": callback.data.split('_')[1], "message": mes, "new_mes": None})
-
-
-@router.callback_query(F.data == callbacks['⭐️ Установить никнейм'])
-async def enter_nickname(callback: CallbackQuery, state: FSMContext):
-    await callback.message.edit_text(LEXICON_RU['enter_nickname'], reply_markup=kb.back())
-    await state.set_state(UserState.enter_nickname)
-
-
-@router.message(StateFilter(UserState.enter_nickname))
-async def set_nickname(message: Message, state: FSMContext):
     try:
-        await db.set_nickname(message.from_user.id, message.text)
-        await message.answer(LEXICON_RU['nickname_is_set'].format(message.text))
+        await db.set_user(
+            callback.from_user.id, data['name'], data['date_of_birth'], data['status'], data['phone_number']
+        )
     except Exception as e:
-        await message.answer(str(e))
-    await state.clear()
+        print(f'Ошибка при попытке добавления информации о пользователе: {e}')
+        return await callback.answer('Что-то пошло не так... Приносим свои извинения', show_alert=True)
+
+    await callback.message.edit_text('✅ Информация о вашем аккаунте сохранена!')
+
+    if data['registration_to_event']:
+        event = await db.get_event(data['registration_to_event'])
+        await callback.message.answer(
+            text=LEXICON['event_info'].format(event.name, event.description, event.date),
+            reply_markup=kb.register(event.id)  # TODO: добавить кнопку "назад"
+        )
+
+
+@router.callback_query(F.data == callbacks[buttons['notifications']])
+async def notifications_button_handler(callback: CallbackQuery):
+    await callback.message.edit_text(LEXICON['notifications'], reply_markup=kb.notifications())
+
+
+@router.callback_query(
+    F.data.in_([callbacks[buttons['turn_notifications_on']], callbacks[buttons['turn_notifications_off']]])
+)
+async def turn_notifications_on(callback: CallbackQuery):
+    value = callback.data.split('_')[-1] == 'on'
+
+    await db.toggle_user_notifications(callback.from_user.id, value)
+
+    await callback.message.edit_text(
+        text=LEXICON['notifications_turned_on'] if value else LEXICON['notifications_turned_off']
+    )
+
+
+@router.callback_query(F.data == callbacks[buttons['help']])
+async def help_button_handler(callback: CallbackQuery):
+    await callback.message.answer('Какой-то текст')

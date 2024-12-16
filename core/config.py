@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from environs import Env
 
@@ -44,6 +45,13 @@ def load_config(path: str | None) -> Config:
 
 config: Config = load_config('.env')
 
-storage = MemoryStorage()
-bot: Bot = Bot(token=config.tg_bot.token)
+default = DefaultBotProperties(parse_mode='HTML')
+bot: Bot = Bot(token=config.tg_bot.token, default=default)
+
+storage = MemoryStorage()  # TODO: перевести на редис
 dp: Dispatcher = Dispatcher(storage=storage)
+
+DATABASE_URL = (
+    f"postgresql+asyncpg://{config.database.user}:{config.database.password}@"
+    f"{config.database.host}/{config.database.name}"
+)

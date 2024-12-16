@@ -1,1 +1,1 @@
-from lexicon.lexicon import *
+from lexicon.lexicon import LEXICON, buttons, callbacks, other

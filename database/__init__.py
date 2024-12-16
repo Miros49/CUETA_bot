@@ -1,8 +1,6 @@
-from .db_models import Base, Admin, User
+from .db_models import Base, User, Event, Registration
 from .database import DataBase
 
-from core import config
+from core import DATABASE_URL
 
-db = DataBase(
-    f"postgresql+asyncpg://{config.database.user}:{config.database.password}@{config.database.host}/{config.database.name}"
-)
+db: DataBase = DataBase(DATABASE_URL)
