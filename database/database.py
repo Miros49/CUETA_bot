@@ -164,3 +164,7 @@ class DataBase:
                     {"id": event.id, "name": event.name, "date": event.date}
                     for event in events
                 ]
+
+    # BearPong 25.12.2024
+
+    # async def create_team(self, player_1_id: int, player_2_id: int):

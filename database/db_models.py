@@ -34,3 +34,14 @@ class Registration(Base):
     id = Column(BigInteger, primary_key=True)
     event_id = Column(BigInteger, ForeignKey('events.id'))
     user = Column(BigInteger, ForeignKey('users.id'))
+
+
+class BearPong(Base):
+    __tablename__ = 'bear_pong'
+    id = Column(BigInteger, primary_key=True)
+    player_1_id = Column(BigInteger)
+    player_1_username = Column(String)
+    player_2_id = Column(BigInteger)
+    player_2_username = Column(String)
+    status = Column(Boolean)
+    created_manually = Column(Boolean)

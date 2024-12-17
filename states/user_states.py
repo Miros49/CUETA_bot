@@ -1,7 +1,8 @@
-from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.state import State, StatesGroup, default_state
 
 
 class UserState(StatesGroup):
+    default_state: State = default_state
     sign_in_enter_name: State = State()
     sign_in_enter_date_of_birth: State = State()
     sign_in_enter_status: State = State()

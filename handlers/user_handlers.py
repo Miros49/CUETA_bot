@@ -9,7 +9,7 @@ from database import db
 from keyboards import UserKeyboards
 from lexicon import LEXICON, buttons, callbacks, other
 from states import UserState
-from utils import validate_and_format_phone_number
+from utils import validate_and_format_phone_number, convert_string_to_date
 
 router: Router = Router()
 kb: UserKeyboards = UserKeyboards()
@@ -141,7 +141,7 @@ async def sign_in_enter_status_handler(message: Message, state: FSMContext):
 
     await message.delete()
 
-    phone_number = validate_and_format_phone_number(message.contact.phone_number if message.contact else message.text)
+    phone_number = await validate_and_format_phone_number(message.contact.phone_number if message.contact else message.text)
 
     if not phone_number['valid']:
         try:
@@ -160,7 +160,7 @@ async def sign_in_enter_status_handler(message: Message, state: FSMContext):
         ), reply_markup=kb.confirm_registration()
     )
 
-    await state.clear()
+    await state.set_state(UserState.default_state)
     await state.update_data(phone_number=phone_number['formatted'])
 
 
@@ -173,13 +173,15 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
     if callback.data.split('_')[-1] == 'canceled':
         return await callback.message.edit_text('Регистрация отменена')
 
+    date_of_birth = await convert_string_to_date(data['date_of_birth'])
+
     try:
         await db.set_user(
-            callback.from_user.id, data['name'], data['date_of_birth'], data['status'], data['phone_number']
+            callback.from_user.id, data['name'], date_of_birth, data['status'], data['phone_number']
         )
     except Exception as e:
-        print(f'Ошибка при попытке добавления информации о пользователе: {e}')
-        return await callback.answer('Что-то пошло не так... Приносим свои извинения', show_alert=True)
+        print(f'\nОшибка при попытке добавления информации о пользователе:\n{e}\n')
+        return await callback.answer(LEXICON['error_occurred'], show_alert=True)
 
     await callback.message.edit_text('✅ Информация о вашем аккаунте сохранена!')
 

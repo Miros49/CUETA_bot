@@ -1,7 +1,9 @@
 import re
+from datetime import datetime
+from typing import Optional
 
 
-def validate_and_format_phone_number(phone_number: str) -> dict:
+async def validate_and_format_phone_number(phone_number: str) -> dict:
     # Убираем все лишние символы, кроме '+' в начале
     cleaned_number = re.sub(r'[^\d+]', '', phone_number)
 
@@ -21,3 +23,29 @@ def validate_and_format_phone_number(phone_number: str) -> dict:
     formatted_number = f"+7 ({cleaned_number[1:4]}) {cleaned_number[4:7]}-{cleaned_number[7:9]}-{cleaned_number[9:]}"
 
     return {'valid': True, 'formatted': formatted_number}
+
+
+async def convert_string_to_date(date_str: str) -> Optional[datetime.date]:
+    """
+    Преобразует строку даты в объект datetime.date.
+    Поддерживает форматы:
+    - DD.MM.YYYY
+    - DD.MM.YYYY HH:MM
+
+    Args:
+        date_str (str): Строка с датой или датой и временем.
+
+    Returns:
+        Optional[datetime.date]: Объект даты, если преобразование успешно, иначе None.
+    """
+
+    try:
+        if ':' in date_str:
+            # Формат с временем
+            converted_str = datetime.strptime(date_str, '%d.%m.%Y %H:%M')
+        else:
+            # Формат только с датой
+            converted_str = datetime.strptime(date_str, '%d.%m.%Y')
+        return converted_str.date()
+    except ValueError:
+        return None

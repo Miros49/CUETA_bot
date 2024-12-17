@@ -1,20 +1,19 @@
-from datetime import datetime
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
-from aiogram.fsm.state import default_state
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-from core import config, bot, DATABASE_URL
-from database import DataBase
+from core import bot
+from database import db
 from filters import IsAdmin
 from keyboards import AdminKeyboards, UserKeyboards
 from lexicon import LEXICON, callbacks, buttons
 from states import AdminState
+from utils import convert_string_to_date
+
 
 router: Router = Router()
 kb: AdminKeyboards = AdminKeyboards()
-db: DataBase = DataBase(DATABASE_URL)
 
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
@@ -91,7 +90,7 @@ async def event_date_handler(message: Message, state: FSMContext):
         ), reply_markup=kb.confirm_creation_of_event()
     )
 
-    await state.set_state(default_state)
+    await state.set_state(AdminState.default_state)
     await state.update_data(event_date=message.text)
 
 
@@ -104,20 +103,10 @@ async def create_event_handler(callback: CallbackQuery, state: FSMContext):
 
     if callback.data.split('_')[-1] == 'confirm':
         try:
-            try:
-                if ':' in data['event_date']:
-                    # Формат с временем
-                    event_datetime = datetime.strptime(data['event_date'], '%d.%m.%Y %H:%M')
-                else:
-                    # Формат только с датой
-                    event_datetime = datetime.strptime(data['event_date'], '%d.%m.%Y')
-
-                event_date = event_datetime.date()
-            except ValueError:
-                return await callback.message.answer(
-                    "Ошибка: неверный формат даты. Используйте формат DD.MM.YYYY или DD.MM.YYYY HH:MM.")
+            event_date = await convert_string_to_date(data['event_date'])
 
             event_id = await db.create_event(data['event_name'], data['event_description'], event_date)
+
         except Exception as e:
             print(f'Ошибка при попытке создания мероприятия: {e}')
 

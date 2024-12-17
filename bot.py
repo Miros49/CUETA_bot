@@ -1,7 +1,6 @@
 import asyncio
 import logging
 
-from aiogram import Dispatcher
 from core import dp, bot
 
 from database import db
