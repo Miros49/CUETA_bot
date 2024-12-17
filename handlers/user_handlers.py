@@ -9,7 +9,11 @@ from database import db
 from keyboards import UserKeyboards
 from lexicon import LEXICON, buttons, callbacks, other
 from states import UserState
+<<<<<<< HEAD
 from utils import validate_and_format_phone_number
+=======
+from utils import validate_and_format_phone_number, convert_string_to_date
+>>>>>>> miros
 
 router: Router = Router()
 kb: UserKeyboards = UserKeyboards()
@@ -85,6 +89,7 @@ async def sign_in_enter_name_handler(message: Message, state: FSMContext):
 
     await state.set_state(UserState.sign_in_enter_date_of_birth)
     await state.update_data(name=name)
+<<<<<<< HEAD
 
 
 @router.message(StateFilter(UserState.sign_in_enter_date_of_birth))
@@ -180,6 +185,105 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
     except Exception as e:
         print(f'Ошибка при попытке добавления информации о пользователе: {e}')
         return await callback.answer('Что-то пошло не так... Приносим свои извинения', show_alert=True)
+=======
+
+
+@router.message(StateFilter(UserState.sign_in_enter_date_of_birth))
+async def sign_in_enter_date_of_birth_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    date_of_birth = message.text
+    if not date_of_birth:  # TODO: сюда тоже функцию проверки правильности даты (все подобные выносить в /utils/)
+        pass
+
+    await bot.edit_message_text(
+        chat_id=message.chat.id, message_id=data['registration_message_id'],
+        text=LEXICON['sign_in_enter_status']
+    )  # TODO: кнопку на предыдущий этап
+
+    await state.set_state(UserState.sign_in_enter_status)
+    await state.update_data(date_of_birth=date_of_birth)
+
+
+@router.message(StateFilter(UserState.sign_in_enter_status))
+async def sign_in_enter_status_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    if message.text not in other['statuses']:
+        try:
+            return await bot.edit_message_text(
+                chat_id=message.chat.id, message_id=data['registration_message_id'],
+                text=LEXICON['sign_in_enter_status_again']
+            )  # TODO: кнопку на предыдущий этап
+        except TelegramBadRequest:
+            pass
+
+    await bot.edit_message_text(
+        chat_id=message.chat.id, message_id=data['registration_message_id'],
+        text=LEXICON['sign_in_enter_phone_number']
+    )  # TODO: кнопку на предыдущий этап
+
+    additional_message = await message.answer(
+        text=LEXICON['sign_in_enter_phone_number_additional'],
+        reply_markup=kb.request_phone_number()
+    )
+
+    await state.set_state(UserState.sign_in_enter_phone_number)
+    await state.update_data(status=message.text, registration_additional_message_id=additional_message.message_id)
+
+
+@router.message(StateFilter(UserState.sign_in_enter_phone_number))
+async def sign_in_enter_status_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    phone_number = await validate_and_format_phone_number(message.contact.phone_number if message.contact else message.text)
+
+    if not phone_number['valid']:
+        try:
+            await bot.edit_message_text(
+                chat_id=message.chat.id, message_id=data['registration_message_id'],
+                text=LEXICON['sign_in_enter_phone_number_again'].format(phone_number['reason'])
+            )  # TODO: кнопка назад на предыдущий этап
+        except TelegramBadRequest:
+            pass
+
+    await bot.delete_message(message.chat.id, data['registration_additional_message_id'])
+    await bot.edit_message_text(
+        chat_id=message.chat.id, message_id=data['registration_message_id'],
+        text=LEXICON['sign_in_confirmation'].format(
+            data['name'], data['date_of_birth'], data['status'], phone_number['formatted']
+        ), reply_markup=kb.confirm_registration()
+    )
+
+    await state.set_state(UserState.default_state)
+    await state.update_data(phone_number=phone_number['formatted'])
+
+
+@router.callback_query(
+    F.data.in_([callbacks[buttons['confirm_registration']], callbacks[buttons['cancel_registration']]])
+)
+async def confirm_registration_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+
+    if callback.data.split('_')[-1] == 'canceled':
+        return await callback.message.edit_text('Регистрация отменена')
+
+    date_of_birth = await convert_string_to_date(data['date_of_birth'])
+
+    try:
+        await db.set_user(
+            callback.from_user.id, data['name'], date_of_birth, data['status'], data['phone_number']
+        )
+    except Exception as e:
+        print(f'\nОшибка при попытке добавления информации о пользователе:\n{e}\n')
+        return await callback.answer(LEXICON['error_occurred'], show_alert=True)
+>>>>>>> miros
 
     await callback.message.edit_text('✅ Информация о вашем аккаунте сохранена!')
 

@@ -1,20 +1,36 @@
+<<<<<<< HEAD
 from datetime import datetime
+=======
+>>>>>>> miros
 from aiogram import F, Router
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.state import default_state
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
+<<<<<<< HEAD
 from core import config, bot, DATABASE_URL
 from database import DataBase
+=======
+from core import bot
+from database import db
+>>>>>>> miros
 from filters import IsAdmin
 from keyboards import AdminKeyboards, UserKeyboards
 from lexicon import LEXICON, callbacks, buttons
 from states import AdminState
+<<<<<<< HEAD
 
 router: Router = Router()
 kb: AdminKeyboards = AdminKeyboards()
 db: DataBase = DataBase(DATABASE_URL)
+=======
+from utils import convert_string_to_date
+
+
+router: Router = Router()
+kb: AdminKeyboards = AdminKeyboards()
+>>>>>>> miros
 
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
@@ -91,7 +107,11 @@ async def event_date_handler(message: Message, state: FSMContext):
         ), reply_markup=kb.confirm_creation_of_event()
     )
 
+<<<<<<< HEAD
     await state.set_state(default_state)
+=======
+    await state.set_state(AdminState.default_state)
+>>>>>>> miros
     await state.update_data(event_date=message.text)
 
 
@@ -104,6 +124,7 @@ async def create_event_handler(callback: CallbackQuery, state: FSMContext):
 
     if callback.data.split('_')[-1] == 'confirm':
         try:
+<<<<<<< HEAD
             try:
                 if ':' in data['event_date']:
                     # Формат с временем
@@ -118,6 +139,12 @@ async def create_event_handler(callback: CallbackQuery, state: FSMContext):
                     "Ошибка: неверный формат даты. Используйте формат DD.MM.YYYY или DD.MM.YYYY HH:MM.")
 
             event_id = await db.create_event(data['event_name'], data['event_description'], event_date)
+=======
+            event_date = await convert_string_to_date(data['event_date'])
+
+            event_id = await db.create_event(data['event_name'], data['event_description'], event_date)
+
+>>>>>>> miros
         except Exception as e:
             print(f'Ошибка при попытке создания мероприятия: {e}')
 
