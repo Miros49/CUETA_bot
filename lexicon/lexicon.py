@@ -5,11 +5,7 @@ LEXICON: dict[str, str | list[str]] = {
                       'Приносим свои извинения.',
     'start': '<b>Привет! 👋\n\n'
              'Ты в <code>CUETA</code> – месте, где тусовки и турниры становятся незабываемыми! 😎</b>',
-    'notifications': '<b>🔔 Хотите получать уведомления о новых тусовках и турнирах?</b>',
-    'notifications_turned_on': '<b>Отлично, теперь ты не пропустишь ни одной движухи! 😎</b>',
-    'notifications_turned_off': '<b>Мы не будем присылать тебе анонсы новых мероприятий</b>',
-    'no_upcoming_events': '<b>Похоже, что на данный момент нет запланированных мероприятий 😴\n\n'
-                          'Чтобы не пропустить анонс новых мероприятий, советуем <u>включить уведомления</u></b>',
+    'no_upcoming_events': '<b>Похоже, что на данный момент нет запланированных мероприятий 😴</b>',
     'events_list': '<b>📋 Список ближайших мероприятий:</b>',
     'new_event_notification': '<b>Тут уже сами текст поправите:\n\n'
                               '🏷 Название: <code>{}</code>\n'
@@ -37,7 +33,7 @@ LEXICON: dict[str, str | list[str]] = {
                             '📆 Дата рождения: <code>{}</code>\n'
                             '👤 Статус: {}\n'
                             '📱 Номер телефона: <code>{}</code></b>',
-    'registration_to_event_confirmed': '<b>Вы зарегистрированы на мероприятие <u>{}</u>, '
+    'registration_to_event_confirmed': '<b>✅ Вы зарегистрированы на мероприятие <u>{}</u>, '
                                        'которое состоится <code>{}</code></b>',
 
     'admin_menu': '<b>Здравствуйте, {}!</b>',
@@ -63,11 +59,9 @@ LEXICON: dict[str, str | list[str]] = {
 
 buttons: dict[str, str] = {
     'upcoming_events': '📋 Список ближайших мероприятий',
-    'notifications': '📨 Уведомления',
     'help': 'ℹ️ Помощь',
-    'turn_notifications_on': '✅ Да',
-    'turn_notifications_off': '❌ Нет',
-    'register': '📝 Зарегистрироваться',
+    'event_registration_standard': '📝 Зарегистрироваться',
+    'event_registration_fast': '⚡️ Фаст-регистрация',
     'confirm_registration': '✅ Всё верно',
     'cancel_registration': '❌ Отмена',
 
@@ -82,12 +76,10 @@ buttons: dict[str, str] = {
 }
 
 callbacks: dict[str, str] = {
-    buttons['notifications']: 'notifications_button',
     buttons['upcoming_events']: 'events_button',
     buttons['help']: 'help_button',
-    buttons['turn_notifications_on']: 'turn_notifications_on',
-    buttons['turn_notifications_off']: 'turn_notifications_off',
-    buttons['register']: 'register_for_the_event_{}',
+    buttons['event_registration_standard']: 'register_for_the_event_standard_{}',
+    buttons['event_registration_fast']: 'register_for_the_event_fast_{}',
     buttons['confirm_registration']: 'registration_confirmed',
     buttons['cancel_registration']: 'registration_canceled',
 

@@ -12,29 +12,8 @@ class UserKeyboards:
         kb = InlineKeyboardBuilder()
         kb.add(
             InlineKeyboardButton(text=buttons['upcoming_events'], callback_data=callbacks[buttons['upcoming_events']]),
-            InlineKeyboardButton(text=buttons['notifications'], callback_data=callbacks[buttons['notifications']]),
             InlineKeyboardButton(text=buttons['help'], callback_data=callbacks[buttons['help']])
         ).adjust(1, 2)
-
-        return kb.as_markup()
-
-    @staticmethod
-    def notifications() -> InlineKeyboardMarkup:
-        kb = InlineKeyboardBuilder()
-        kb.row(
-            InlineKeyboardButton(text=buttons['turn_notifications_on'],
-                                 callback_data=callbacks[buttons['turn_notifications_on']]),
-            InlineKeyboardButton(text=buttons['turn_notifications_off'],
-                                 callback_data=callbacks[buttons['turn_notifications_off']])
-        )
-
-        return kb.as_markup()
-
-    @staticmethod
-    def notifications_on() -> InlineKeyboardMarkup:
-        kb = InlineKeyboardBuilder()
-        kb.row(InlineKeyboardButton(text='✅ Включить уведомления',
-                                    callback_data=callbacks[buttons['turn_notifications_on']]))
 
         return kb.as_markup()
 
@@ -48,10 +27,14 @@ class UserKeyboards:
         return kb.as_markup()
 
     @staticmethod
-    def register(event_id: int) -> InlineKeyboardMarkup:
+    def register_to_event(event_id: int) -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
-        kb.row(InlineKeyboardButton(text=buttons['register'],
-                                    callback_data=callbacks[buttons['register']].format(event_id)))
+        kb.add(
+            InlineKeyboardButton(text=buttons['event_registration_standard'],
+                                 callback_data=callbacks[buttons['event_registration_standard']].format(event_id)),
+            InlineKeyboardButton(text=buttons['event_registration_fast'],
+                                 callback_data=callbacks[buttons['event_registration_fast']].format(event_id))
+        ).adjust(1)
 
         return kb.as_markup()
 

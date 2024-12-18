@@ -18,7 +18,6 @@ class User(Base):
     date_of_birth = Column(Date)
     status = Column(String)
     phone_number = Column(String)
-    allow_notifications = Column(Boolean, default=True)
 
 
 class Event(Base):
@@ -33,15 +32,15 @@ class Registration(Base):
     __tablename__ = 'registrations'
     id = Column(BigInteger, primary_key=True)
     event_id = Column(BigInteger, ForeignKey('events.id'))
-    user = Column(BigInteger, ForeignKey('users.id'))
+    user_id = Column(BigInteger, ForeignKey('users.id'))
 
 
-class BearPong(Base):
-    __tablename__ = 'bear_pong'
+class BeerPongTeam(Base):
+    __tablename__ = 'beer_pong'
     id = Column(BigInteger, primary_key=True)
-    player_1_id = Column(BigInteger)
-    player_1_username = Column(String)
-    player_2_id = Column(BigInteger)
-    player_2_username = Column(String)
+    player_1_id = Column(BigInteger, ForeignKey('users.id'))
+    player_1_username = Column(String, ForeignKey('users.username'))
+    player_2_id = Column(BigInteger, ForeignKey('users.id'))
+    player_2_username = Column(String, ForeignKey('users.username'))
     status = Column(Boolean)
     created_manually = Column(Boolean)

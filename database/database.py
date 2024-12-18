@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import date
 
-from . import User, Event, Registration
+from . import User, Event, Registration, BeerPongTeam
 
 Base = declarative_base()
 
@@ -53,19 +53,6 @@ class DataBase:
                 result = await session.execute(query)
                 return [user for user in result.scalars().all()]
 
-    async def toggle_user_notifications(self, user_id: int, notifications: bool):
-        async with self.async_session() as session:
-            async with session.begin():
-                query = select(User).where(User.id == user_id)
-                result = await session.execute(query)
-                user = result.scalars().first()
-
-                if user:
-                    user.allow_notifications = notifications
-                    await session.commit()
-                else:
-                    raise ValueError(f"Пользователь с id {user_id} не найден")
-
     async def set_user(self, user_id: int, name: str, date_of_birth: date, status: str, phone_number: str):
         async with self.async_session() as session:
             async with session.begin():
@@ -77,14 +64,6 @@ class DataBase:
                 user.status = status
                 user.phone_number = phone_number
                 await session.commit()
-
-    async def get_users_for_mailing(self):
-        async with self.async_session() as session:
-            async with session.begin():
-                query = select(User).where(User.allow_notifications)
-                result = await session.execute(query)
-                user_ids = [user.id for user in result.scalars().all()]
-                return user_ids
 
     # # ADMIN
     #
@@ -143,14 +122,16 @@ class DataBase:
                 new_event = Event(name=name, description=description, date=event_date)
                 session.add(new_event)
                 await session.commit()
+
                 return new_event.id
 
-    async def get_event(self, event_id: int | str) -> Event:
+    async def get_event(self, event_id: int) -> Event:
         async with self.async_session() as session:
             async with session.begin():
-                query = select(Event).where(Event.id == int(event_id))
+                query = select(Event).where(Event.id == event_id)
                 result = await session.execute(query)
                 event = result.scalars().first()
+
                 return event
 
     async def get_all_events(self) -> List[dict]:
@@ -165,6 +146,48 @@ class DataBase:
                     for event in events
                 ]
 
-    # BearPong 25.12.2024
+    # Registration
 
-    # async def create_team(self, player_1_id: int, player_2_id: int):
+    async def create_registration(self, event_id: int, user_id: int) -> int:
+        async with self.async_session() as session:
+            async with session.begin():
+                registration = Registration(event_id=event_id, user_id=user_id)
+                session.add(registration)
+                await session.commit()
+
+                return registration.id
+
+    # BeerPong 25.12.2024
+
+    async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
+                          player_2_username: str) -> int:
+        async with self.async_session() as session:
+            async with session.begin():
+                team = BeerPongTeam(
+                    player_1_id=player_1_id, player_1_username=player_1_username,
+                    player_2_id=player_2_id, player_2_username=player_2_username,
+                    status=True, created_manually=True
+                )
+                session.add(team)
+                await session.commit()
+                return team.id
+
+    async def join_team(self, player_id: int, player_username: str) -> str | None:
+        async with self.async_session() as session:
+            async with session.begin():
+                query = session.query(BeerPongTeam).where(not BeerPongTeam.status)
+                result = await session.execute(query)
+                team = result.scalars().first()
+
+                if not team:
+                    team = BeerPongTeam(
+                        player_1_id=player_id, player_1_username=player_username, status=False, created_manually=False
+                    )
+                    session.add(team)
+                    await session.commit()
+                    return None
+
+                team.player_2_id = player_id
+                team.player_2_username = player_username
+                team.status = True
+                await session.commit()

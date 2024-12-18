@@ -1,36 +1,22 @@
-<<<<<<< HEAD
-from datetime import datetime
-=======
->>>>>>> miros
-from aiogram import F, Router
+import asyncio
+
+from aiogram import F, Router, exceptions
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
-from aiogram.fsm.state import default_state
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 
-<<<<<<< HEAD
-from core import config, bot, DATABASE_URL
-from database import DataBase
-=======
 from core import bot
 from database import db
->>>>>>> miros
 from filters import IsAdmin
 from keyboards import AdminKeyboards, UserKeyboards
 from lexicon import LEXICON, callbacks, buttons
 from states import AdminState
-<<<<<<< HEAD
-
-router: Router = Router()
-kb: AdminKeyboards = AdminKeyboards()
-db: DataBase = DataBase(DATABASE_URL)
-=======
 from utils import convert_string_to_date
 
 
 router: Router = Router()
 kb: AdminKeyboards = AdminKeyboards()
->>>>>>> miros
 
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
@@ -107,11 +93,6 @@ async def event_date_handler(message: Message, state: FSMContext):
         ), reply_markup=kb.confirm_creation_of_event()
     )
 
-<<<<<<< HEAD
-    await state.set_state(default_state)
-=======
-    await state.set_state(AdminState.default_state)
->>>>>>> miros
     await state.update_data(event_date=message.text)
 
 
@@ -120,31 +101,13 @@ async def event_date_handler(message: Message, state: FSMContext):
 )
 async def create_event_handler(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    print(data['event_name'])
 
     if callback.data.split('_')[-1] == 'confirm':
         try:
-<<<<<<< HEAD
-            try:
-                if ':' in data['event_date']:
-                    # Формат с временем
-                    event_datetime = datetime.strptime(data['event_date'], '%d.%m.%Y %H:%M')
-                else:
-                    # Формат только с датой
-                    event_datetime = datetime.strptime(data['event_date'], '%d.%m.%Y')
-
-                event_date = event_datetime.date()
-            except ValueError:
-                return await callback.message.answer(
-                    "Ошибка: неверный формат даты. Используйте формат DD.MM.YYYY или DD.MM.YYYY HH:MM.")
-
-            event_id = await db.create_event(data['event_name'], data['event_description'], event_date)
-=======
             event_date = await convert_string_to_date(data['event_date'])
 
             event_id = await db.create_event(data['event_name'], data['event_description'], event_date)
 
->>>>>>> miros
         except Exception as e:
             print(f'Ошибка при попытке создания мероприятия: {e}')
 
@@ -157,21 +120,21 @@ async def create_event_handler(callback: CallbackQuery, state: FSMContext):
             # TODO: сюда же кнопку удаления мероприятия
         )
 
-        for user_id in await db.get_users_for_mailing():
-            await bot.send_message(
-                chat_id=user_id,
-                text=LEXICON['new_event_notification'].format(
-                    data['event_name'], data['event_description'], data['event_date']
-                ),
-                reply_markup=UserKeyboards.register(event_id)
-            )
+        for user in await db.get_all_users():
+            try:
+                await bot.send_message(
+                    chat_id=user.id,
+                    text=LEXICON['new_event_notification'].format(
+                        data['event_name'], data['event_description'], data['event_date']
+                    ),
+                    reply_markup=UserKeyboards.register_to_event(event_id)
+                )
+                await asyncio.sleep(0.05)  # задержка чтоб не заблокировали
+
+            except TelegramBadRequest:
+                pass
 
     await callback.message.edit_text(LEXICON['admin_event_creation_canceled'], reply_markup=kb.back_to_menu())
-
-
-@router.callback_query()
-async def kalosbornik(callback: CallbackQuery):
-    print(callback)
 
 
 def todo() -> None:
