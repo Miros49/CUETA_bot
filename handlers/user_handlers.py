@@ -310,9 +310,8 @@ async def profile_message_handler(message: Message, state: FSMContext):
 
     await message.answer(
         text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
-        reply_markup=kb.start()
+        reply_markup=kb.profile()
     )
-
 
 @router.callback_query(F.data == callbacks[buttons['profile']], IsNotRegistration())
 async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
@@ -329,6 +328,39 @@ async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
         reply_markup=kb.start()
     )
 
+
+@router.callback_query(F.data == callbacks[buttons['change_profile_info']])
+async def change_profile_info_handler(callback: CallbackQuery, state: FSMContext):
+    user = await db.get_user(callback.from_user.id)
+
+    await callback.message.answer(
+        text=LEXICON['change_profile_message'],
+        reply_markup=kb.change_profile_info()
+    )
+
+@router.callback_query(F.data == callbacks[buttons['change_name']])
+async def change_profile_info_handler(callback: CallbackQuery, state: FSMContext):
+    user = await db.get_user(callback.from_user.id)
+
+    pass # TODO: Сделать смену имени
+
+@router.callback_query(F.data == callbacks[buttons['change_date_of_birth']])
+async def change_profile_info_handler(callback: CallbackQuery, state: FSMContext):
+    user = await db.get_user(callback.from_user.id)
+
+    pass # TODO: Сделать смену даты рождения
+
+@router.callback_query(F.data == callbacks[buttons['change_status']])
+async def change_profile_info_handler(callback: CallbackQuery, state: FSMContext):
+    user = await db.get_user(callback.from_user.id)
+
+    pass # TODO: Сделать смену статуса
+
+@router.callback_query(F.data == callbacks[buttons['change_phone_number']])
+async def change_profile_info_handler(callback: CallbackQuery, state: FSMContext):
+    user = await db.get_user(callback.from_user.id)
+
+    pass # TODO: Сделать смену номера телефона
 
 @router.callback_query(F.data.startswith('beer_pong_registration'))
 async def beer_pong_registration_handler(callback: CallbackQuery):

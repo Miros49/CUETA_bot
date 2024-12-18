@@ -1,6 +1,7 @@
 from typing import List
 
 from aiogram.types import InlineKeyboardButton, KeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from aiogram.utils import keyboard
 from aiogram.utils.keyboard import InlineKeyboardBuilder, ReplyKeyboardBuilder
 
 from lexicon import buttons, callbacks
@@ -15,6 +16,40 @@ class UserKeyboards:
                 [KeyboardButton(text=buttons['profile']), KeyboardButton(text=buttons['help'])]
             ],
             resize_keyboard=True
+        )
+
+        return kb
+
+    @staticmethod
+    def profile() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=buttons['change_profile_info'],
+                                      callback_data=callbacks[buttons['change_profile_info']])]
+            ]
+        )
+
+        return kb
+
+    def change_profile_info(self) -> InlineKeyboardMarkup:
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(
+                    text=buttons['change_name'], callback_data=callbacks[buttons['change_name']]
+                )],
+                [InlineKeyboardButton(
+                    text=buttons['change_date_of_birth'], callback_data=callbacks[buttons['change_date_of_birth']]
+                )],
+                [InlineKeyboardButton(
+                    text=buttons['change_status'], callback_data=callbacks[buttons['change_status']]
+                )],
+                [InlineKeyboardButton(
+                    text=buttons['change_phone_number'], callback_data=callbacks[buttons['change_phone_number']]
+                )],
+                [InlineKeyboardButton(
+                    text=buttons['back'], callback_data=callbacks[buttons['back']]
+                )]
+            ]
         )
 
         return kb

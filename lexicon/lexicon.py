@@ -45,6 +45,7 @@ LEXICON: dict[str, str | list[str]] = {
                        '📆 Дата рождения: <code>{}</code>\n'
                        '🔹 Статус: {}\n'
                        '📱 Номер телефона: <code>{}</code></b>',
+    'change_profile_message': 'Что вы хотите поменять?',
 
     'beer_pong_registration_player': 'Скажите текст\nЕсть команда?',
     'beer_pong_registrate_team': '<b>Отлично! 😎\n'
@@ -98,6 +99,13 @@ buttons: dict[str, str] = {
     'registration_status_bachelor-cu': 'Бакалавр ЦУ',
     'registration_status_master-cu': 'Магистрант ЦУ',
     'registration_status_other': 'Другое',
+    'back': '⏪ Назад',
+    'change_profile_info': 'Изменить информацию о себе',
+    'change_name': 'Изменить ФИО',
+    'change_date_of_birth': 'Изменить дату рождения',
+    'change_status': 'Изменить свой статус',
+    'change_phone_number': 'Изменить номер телефона',
+
 
     'beer_pong_registration_visitor': '👀 Приду посмотреть (бесплатно)',
     'beer_pong_registration_player': '🍺 Буду играть! (1000₽)',
@@ -124,6 +132,12 @@ callbacks: dict[str, str] = {
     buttons['registration_status_bachelor-cu']: 'registration_status_bachelor-cu',
     buttons['registration_status_master-cu']: 'registration_status_master-cu',
     buttons['registration_status_other']: 'registration_status_other',
+    buttons['change_profile_info']: 'change_profile_info_button',
+    buttons['change_name']: 'change_name_button',
+    buttons['change_date_of_birth']: 'change_date_of_birth_button',
+    buttons['change_status']: 'change_status_button',
+    buttons['change_phone_number']: 'change_phone_number_button',
+    buttons['back']: 'back_button',
 
     buttons['beer_pong_registration_visitor']: 'beer_pong_registration_visitor',
     buttons['beer_pong_registration_player']: 'beer_pong_registration_player',
