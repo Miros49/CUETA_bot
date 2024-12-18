@@ -178,6 +178,29 @@ class DataBase:
 
                 return count <= 16
 
+    async def remove_registration(self, event_id: int, user_id: int) -> bool:
+        """
+        Снимает регистрацию пользователя с определённого события.
+        Возвращает True, если удаление прошло успешно, иначе False.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                # Запрос на поиск регистрации пользователя для события
+                query = select(Registration).where(
+                    (Registration.event_id == event_id) & (Registration.user_id == user_id)
+                )
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                # Если регистрация найдена, удаляем её
+                if registration:
+                    await session.delete(registration)
+                    await session.commit()
+                    return True
+
+                return False
+
+
     # BeerPong 25.12.2024
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
@@ -219,3 +242,19 @@ class DataBase:
                     session.add(new_team)
                     await session.commit()
                     return None
+
+    async def is_user_in_team(self, user_id: int) -> bool:
+        """
+        Проверяет, состоит ли пользователь в какой-либо команде.
+        Возвращает True, если пользователь найден в одной из команд.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                # Запрос на поиск пользователя в качестве player_1 или player_2
+                query = select(BeerPongTeam).where(
+                    (BeerPongTeam.player_1_id == user_id) | (BeerPongTeam.player_2_id == user_id)
+                )
+                result = await session.execute(query)
+                team = result.scalars().first()
+
+                return team is not None

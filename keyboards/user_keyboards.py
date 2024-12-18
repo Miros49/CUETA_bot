@@ -133,3 +133,13 @@ class UserKeyboards:
         ).adjust(1)
 
         return kb.as_markup()
+
+    @staticmethod
+    def beer_pong_cancel_registration_player(role: str) -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.row(
+            InlineKeyboardButton(text='❌ Отменить регистрацию',
+                                 callback_data=callbacks['cancel_registration_on_beer_pong'])
+        )
+
+        return kb.as_markup()

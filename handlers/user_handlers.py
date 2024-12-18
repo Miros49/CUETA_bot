@@ -32,6 +32,8 @@ async def start(message: Message, state: FSMContext):
 
             if player_1_id == message.from_user.id:
                 return await message.answer(LEXICON['ref_error'])
+            elif await db.is_user_in_team(message.from_user.id):
+                return await message.answer(LEXICON['re_abuse'])
 
             try:
                 player_1 = await db.get_user(player_1_id)
@@ -93,18 +95,34 @@ async def start_button_handler(callback: CallbackQuery):
 async def event_info_handler(callback: CallbackQuery):
     event = await db.get_event(int(callback.data.split('_')[-1]))
 
-    keyboard = None if await db.check_registration(event.id, callback.from_user.id) \
+    keyboard = kb.beer_pong_cancel_registration_player() \
+        if await db.check_registration(event.id, callback.from_user.id) \
         else kb.beer_pong_registration() if event.id == BEER_PONG_EVENT_ID \
         else kb.register_to_event(event.id)
     keyboard = kb.beer_pong_registration_visitor() if not await db.check_team_limit() else keyboard
 
-    registration = '\n\n✅ Вы уже зарегистрированы на это мероприятие' \
-        if await db.check_registration(event.id, callback.from_user.id) else ''
+    if await db.check_registration(event.id, callback.from_user.id):
+        registration = '\n\n✅ Вы уже зарегистрированы на это мероприятие'
+        price = '💵Вход: <code>1000₽</code>' if await db.is_user_in_team(callback.from_user.id) \
+            else '💵Вход: Бесплатный'
+        event.description.format('')
+    else:
+        price = ''
 
     await callback.message.edit_text(
-        text=LEXICON['event_info'].format(event.name, event.description, registration),
+        text=LEXICON['event_info'].format(event.name, event.description.format(price), registration),
         reply_markup=keyboard
     )  # TODO: добавить кнопку "назад"
+
+
+@router.callback_query(F.data.startswith('cancel_registration_beer_pong'))
+async def cancel_registration_beer_pong_handler(callback: CallbackQuery):
+    if callback.data.split('_')[-1] == 'visitor':
+        if await db.remove_registration(BEER_PONG_EVENT_ID, callback.from_user.id):
+            return
+        else:
+            return await callback.message.edit_text(
+                'Произошла ошибка: вашей регистрации не существует.\nПожалуйста, обратитесь к @Miros49')
 
 
 @router.callback_query(F.data.startswith('register_for_the_event'), IsNotRegistration())
@@ -302,19 +320,6 @@ async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
     )
 
 
-@router.message(F.text == buttons['help'])
-async def help_button_handler(message: Message, state: FSMContext):
-    await message.answer(LEXICON['help'])
-
-    await state.set_state(UserState.default_state)
-
-
-@router.callback_query(F.data == callbacks[buttons['help']], IsNotRegistration())
-async def help_button_handler(callback: CallbackQuery):
-    await callback.message.answer(LEXICON['help'])
-
-
-
 @router.callback_query(F.data.startswith('beer_pong_registration'))
 async def beer_pong_registration_handler(callback: CallbackQuery):
     as_visitor = (callback.data.split('_')[-1] == 'visitor')
@@ -349,7 +354,7 @@ async def beer_pong_registration_handler(callback: CallbackQuery):
 @router.callback_query(F.data.startswith('beer_pong_player'))
 async def beer_pong_player_handler(callback: CallbackQuery):
     if callback.data.split('_')[-1] == 'registration':
-        invite_link = f'https://t.me/CUETA_events_test_bot?start=beer_pong_invite_{callback.from_user.id}'
+        invite_link = f'https://t.me/CUETA_events_bot?start=beer_pong_invite_{callback.from_user.id}'
 
         # try:
         #     await db.create_registration(BEER_PONG_EVENT_ID, callback.from_user.id)

@@ -6,6 +6,7 @@ LEXICON: dict[str, str | list[str]] = {
     'start': '<b>Привет! 👋\n\n'
              'Ты в <code>CUETA</code> – месте, где тусовки и турниры становятся незабываемыми! 😎</b>',
     'ref_error': 'Вы не можете играть с собой же в команде.\nВам нужно скинуть ссылку другу 😉',
+    'ref_abuse': 'Так нельзя! 🙂‍↔️\nВы не можете участвовать в нескольких командах одновременно',
     'help': 'Пожалуйста, дайте нам знать, если у вас появились:\n'
             '- Организационные вопросы: @ShIN_66\n'
             '- Технические вопросы: @Miros49\n\n'
@@ -99,7 +100,7 @@ buttons: dict[str, str] = {
     'registration_status_other': 'Другое',
 
     'beer_pong_registration_visitor': '👀 Приду посмотреть (бесплатно)',
-    'beer_pong_registration_player': '🍺 Буду играть! (много денег)',
+    'beer_pong_registration_player': '🍺 Буду играть! (1000₽)',
     'beer_pong_player_team_registration': '🤝 У меня есть напарник',
     'beer_pong_player_team_creation': '🤚 У меня нет напарника',
 
@@ -128,6 +129,7 @@ callbacks: dict[str, str] = {
     buttons['beer_pong_registration_player']: 'beer_pong_registration_player',
     buttons['beer_pong_player_team_registration']: 'beer_pong_player_team_registration',
     buttons['beer_pong_player_team_creation']: 'beer_pong_player_team_creation',
+    'cancel_registration_on_beer_pong': 'cancel_registration_beer_pong_{}',
 
     buttons['admin_mailing']: 'admin_mailing',
     buttons['admin_events']: 'admin_events',
