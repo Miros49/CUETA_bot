@@ -94,8 +94,9 @@ async def start_button_handler(callback: CallbackQuery):
 @router.callback_query(F.data.startswith('event_info'))
 async def event_info_handler(callback: CallbackQuery):
     event = await db.get_event(int(callback.data.split('_')[-1]))
+    role = 'player' if await db.is_user_in_team(callback.from_user.id) else 'visitor'
 
-    keyboard = kb.beer_pong_cancel_registration_player() \
+    keyboard = kb.beer_pong_cancel_registration_player(role) \
         if await db.check_registration(event.id, callback.from_user.id) \
         else kb.beer_pong_registration() if event.id == BEER_PONG_EVENT_ID \
         else kb.register_to_event(event.id)
@@ -108,6 +109,7 @@ async def event_info_handler(callback: CallbackQuery):
         event.description.format('')
     else:
         price = ''
+        registration = ''
 
     await callback.message.edit_text(
         text=LEXICON['event_info'].format(event.name, event.description.format(price), registration),
@@ -119,10 +121,18 @@ async def event_info_handler(callback: CallbackQuery):
 async def cancel_registration_beer_pong_handler(callback: CallbackQuery):
     if callback.data.split('_')[-1] == 'visitor':
         if await db.remove_registration(BEER_PONG_EVENT_ID, callback.from_user.id):
-            return
+            await callback.message.delete()
+            return await callback.message.answer(
+                '<b>✅ Регистрация на мероприятие снята</b>',
+                reply_markup=kb.start()
+            )
         else:
             return await callback.message.edit_text(
                 'Произошла ошибка: вашей регистрации не существует.\nПожалуйста, обратитесь к @Miros49')
+    else:
+        return await callback.message.edit_text(
+            '<b>Пожалуйста, свяжитесь с @ShIN_66</b>'
+        )
 
 
 @router.callback_query(F.data.startswith('register_for_the_event'), IsNotRegistration())
