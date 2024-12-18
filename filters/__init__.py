@@ -1,1 +1,1 @@
-from filters.filters import IsAdmin
+from filters.filters import IsAdmin, IsNotRegistration

@@ -23,8 +23,10 @@ router.callback_query.filter(IsAdmin())
 
 
 @router.message(Command('admin'))
-async def admin_manu_handler(message: Message):
+async def admin_manu_handler(message: Message, state: FSMContext):
     await message.answer(LEXICON['admin_menu'].format(message.from_user.first_name), reply_markup=kb.menu())
+
+    await state.set_state(AdminState.default_state)
 
 
 @router.callback_query(F.data == callbacks[buttons['admin_back_to_menu']])
@@ -34,7 +36,7 @@ async def admin_menu_callback_handler(callback: CallbackQuery):
 
 @router.callback_query(F.data == callbacks[buttons['admin_mailing']])
 async def mailing_handler(callback: CallbackQuery):
-    await callback.message.edit_text(LEXICON['dev'], reply_markup=kb.menu())
+    await callback.message.edit_text(LEXICON['dev'].format(callback.from_user.first_name), reply_markup=kb.menu())
 
 
 @router.callback_query(F.data == callbacks[buttons['admin_events']])
@@ -86,6 +88,7 @@ async def event_date_handler(message: Message, state: FSMContext):
     data = await state.get_data()
 
     await message.delete()  # TODO: нужно проверять дату на правильность ввода + добавить везде кнопки "назад"
+
     await bot.edit_message_text(
         chat_id=message.chat.id, message_id=data['event_creation_message_id'],
         text=LEXICON['admin_create_event'].format(
@@ -94,6 +97,7 @@ async def event_date_handler(message: Message, state: FSMContext):
     )
 
     await state.update_data(event_date=message.text)
+    await state.set_state(AdminState.default_state)
 
 
 @router.callback_query(F.data.in_(
@@ -129,7 +133,7 @@ async def create_event_handler(callback: CallbackQuery, state: FSMContext):
                     ),
                     reply_markup=UserKeyboards.register_to_event(event_id)
                 )
-                await asyncio.sleep(0.05)  # задержка чтоб не заблокировали
+                await asyncio.sleep(0.07)  # задержка чтоб не заблокировали
 
             except TelegramBadRequest:
                 pass

@@ -161,12 +161,22 @@ class DataBase:
         async with self.async_session() as session:
             async with session.begin():
                 query = select(Registration).where(
-                    Registration.event_id == event_id and Registration.user_id == user_id
+                    (Registration.event_id == event_id) & (Registration.user_id == user_id)
                 )
                 result = await session.execute(query)
                 registration = result.scalars().first()
 
                 return registration
+
+    async def check_team_limit(self) -> bool:
+        async with self.async_session() as session:
+            async with session.begin():
+                # Считаем количество строк в таблице BeerPongTeam
+                query = select(func.count()).select_from(BeerPongTeam)
+                result = await session.execute(query)
+                count = result.scalar()
+
+                return count <= 16
 
     # BeerPong 25.12.2024
 
@@ -186,21 +196,26 @@ class DataBase:
     async def join_team(self, player_id: int, player_username: str) -> BeerPongTeam | None:
         async with self.async_session() as session:
             async with session.begin():
-                query = session.query(BeerPongTeam).where(not BeerPongTeam.status)
+                # Ищем команду, у которой status равен False
+                query = select(BeerPongTeam).where(BeerPongTeam.status == False)
                 result = await session.execute(query)
                 team = result.scalars().first()
 
-                if not team:
-                    team = BeerPongTeam(
-                        player_1_id=player_id, player_1_username=player_username, status=False, created_manually=False
+                if team:
+                    # Если неполная команда найдена, заполняем второго игрока
+                    team.player_2_id = player_id
+                    team.player_2_username = player_username
+                    team.status = True
+                    await session.commit()
+                    return team
+                else:
+                    # Если неполной команды нет, создаём новую с первым игроком
+                    new_team = BeerPongTeam(
+                        player_1_id=player_id,
+                        player_1_username=player_username,
+                        status=False,
+                        created_manually=False
                     )
-                    session.add(team)
+                    session.add(new_team)
                     await session.commit()
                     return None
-
-                team.player_2_id = player_id
-                team.player_2_username = player_username
-                team.status = True
-                await session.commit()
-
-                return team

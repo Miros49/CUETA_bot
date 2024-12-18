@@ -110,7 +110,15 @@ class UserKeyboards:
                                  callback_data=callbacks[buttons['beer_pong_registration_player']])
         ).adjust(1)
 
-        print(1)
+        return kb.as_markup()
+
+    @staticmethod
+    def beer_pong_registration_visitor() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['beer_pong_registration_visitor'],
+                                 callback_data=callbacks[buttons['beer_pong_registration_visitor']])
+        )
 
         return kb.as_markup()
 

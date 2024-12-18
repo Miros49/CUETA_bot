@@ -2,8 +2,9 @@ from dataclasses import dataclass
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.redis import RedisStorage
 from environs import Env
+from redis.asyncio import Redis
 
 
 @dataclass
@@ -48,7 +49,8 @@ config: Config = load_config('.env')
 default = DefaultBotProperties(parse_mode='HTML')
 bot: Bot = Bot(token=config.tg_bot.token, default=default)
 
-storage = MemoryStorage()  # TODO: перевести на редис
+redis = Redis(host='localhost')
+storage = RedisStorage(redis=redis)
 dp: Dispatcher = Dispatcher(storage=storage)
 
 DATABASE_URL = (
@@ -56,4 +58,4 @@ DATABASE_URL = (
     f"{config.database.host}/{config.database.name}"
 )
 
-BEER_PONG_EVENT_ID = 3
+BEER_PONG_EVENT_ID = 1
