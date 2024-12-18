@@ -55,3 +55,5 @@ DATABASE_URL = (
     f"postgresql+asyncpg://{config.database.user}:{config.database.password}@"
     f"{config.database.host}/{config.database.name}"
 )
+
+BEER_PONG_EVENT_ID = 3

@@ -157,6 +157,17 @@ class DataBase:
 
                 return registration.id
 
+    async def check_registration(self, event_id: int, user_id: int) -> Registration:
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(
+                    Registration.event_id == event_id and Registration.user_id == user_id
+                )
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                return registration
+
     # BeerPong 25.12.2024
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
@@ -172,7 +183,7 @@ class DataBase:
                 await session.commit()
                 return team.id
 
-    async def join_team(self, player_id: int, player_username: str) -> str | None:
+    async def join_team(self, player_id: int, player_username: str) -> BeerPongTeam | None:
         async with self.async_session() as session:
             async with session.begin():
                 query = session.query(BeerPongTeam).where(not BeerPongTeam.status)
@@ -191,3 +202,5 @@ class DataBase:
                 team.player_2_username = player_username
                 team.status = True
                 await session.commit()
+
+                return team
