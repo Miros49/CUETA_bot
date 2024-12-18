@@ -269,7 +269,8 @@ async def profile_message_handler(message: Message, state: FSMContext):
         return await state.update_data(registration_message_id=message.message_id, show_profile=True)
 
     await message.answer(
-        LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number)
+        text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
+        reply_markup=kb.start()
     )
 
 
@@ -284,20 +285,21 @@ async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
         return await state.update_data(registration_message_id=callback.message_id, show_profile=True)
 
     await callback.message.answer(
-        LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number)
+        text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
+        reply_markup=kb.start()
     )
 
 
 @router.message(F.text == buttons['help'])
 async def help_button_handler(message: Message, state: FSMContext):
-    await message.answer('Какой-то текст')
+    await message.answer(LEXICON['help'])
 
     await state.set_state(UserState.default_state)
 
 
 @router.callback_query(F.data == callbacks[buttons['help']], IsNotRegistration())
 async def help_button_handler(callback: CallbackQuery):
-    await callback.message.answer('Какой-то текст')
+    await callback.message.answer(LEXICON['help'])
 
 
 @router.callback_query(F.data.startswith('beer_pong_registration'))
