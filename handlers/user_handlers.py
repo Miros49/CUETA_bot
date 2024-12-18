@@ -9,7 +9,7 @@ from database import db
 from keyboards import UserKeyboards
 from lexicon import LEXICON, buttons, callbacks, other
 from states import UserState
-from utils import validate_and_format_phone_number, convert_string_to_date
+from utils import validate_and_format_phone_number, convert_string_to_date, validate_date_of_birth
 
 router: Router = Router()
 kb: UserKeyboards = UserKeyboards()
@@ -64,7 +64,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
 
     await callback.message.edit_text(
         text=LEXICON['registration_to_event_confirmed'].format(event.name, event.date)
-    )  # TODO: добавить кнопку включить уведы если их нет
+    )  # TODO: добавить кнопку включить уведы если их нет (хуй там плавал)
 
 
 @router.message(StateFilter(UserState.sign_in_enter_name))
@@ -99,8 +99,17 @@ async def sign_in_enter_date_of_birth_handler(message: Message, state: FSMContex
     await message.delete()
 
     date_of_birth = message.text
-    if not date_of_birth:  # TODO: сюда тоже функцию проверки правильности даты (все подобные выносить в /utils/)
-        pass
+    validation_check = validate_date_of_birth(date_of_birth)
+
+    if not validation_check['valid']:
+        try:
+            await bot.edit_message_text(
+                chat_id=message.chat.id, message_id=data['registration_message_id'],
+                text=LEXICON['sign_in_enter_date_of_birth_again'].format(validation_check['reason'])
+            )  # TODO: кнопка назад на предыдущий этап
+        except TelegramBadRequest:
+            pass
+        return
 
     await bot.edit_message_text(
         chat_id=message.chat.id, message_id=data['registration_message_id'],
@@ -157,6 +166,7 @@ async def sign_in_enter_status_handler(message: Message, state: FSMContext):
             )  # TODO: кнопка назад на предыдущий этап
         except TelegramBadRequest:
             pass
+        return
 
     await bot.delete_message(message.chat.id, data['registration_additional_message_id'])
     await bot.edit_message_text(

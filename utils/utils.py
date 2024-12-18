@@ -50,3 +50,16 @@ async def convert_string_to_date(date_str: str) -> Optional[datetime.date]:
         return converted_str.date()
     except ValueError:
         return None
+
+
+def validate_date_of_birth(date_of_birth: str) -> dict:
+    # Проверяем формат по длине
+    if not re.fullmatch(r"\d{2}\.\d{2}\.\d{4}", date_of_birth):
+        return {'valid': False, 'reason': 'Введите дату своего рождения в формате: дд.мм.гггг. Например: 08.09.2006.'}
+
+    try:
+        datetime.strptime(date_of_birth, "%d.%m.%Y")  # проверка формата
+    except ValueError:
+        return {'valid': False, 'reason': 'Введите дату своего рождения в формате: дд.мм.гггг. Например: 08.09.2006.'}
+
+    return {'valid': True}
