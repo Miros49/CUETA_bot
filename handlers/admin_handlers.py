@@ -124,19 +124,19 @@ async def create_event_handler(callback: CallbackQuery, state: FSMContext):
             # TODO: сюда же кнопку удаления мероприятия
         )
 
-        for user in await db.get_all_users():
-            try:
-                await bot.send_message(
-                    chat_id=user.id,
-                    text=LEXICON['new_event_notification'].format(
-                        data['event_name'], data['event_description'], data['event_date']
-                    ),
-                    reply_markup=UserKeyboards.register_to_event(event_id)
-                )
-                await asyncio.sleep(0.07)  # задержка чтоб не заблокировали
+        # for user in await db.get_all_users():
+        #     try:
+        #         await bot.send_message(
+        #             chat_id=user.id,
+        #             text=LEXICON['new_event_notification'].format(
+        #                 data['event_name'], data['event_description'], data['event_date']
+        #             ),
+        #             reply_markup=UserKeyboards.register_to_event(event_id)
+        #         )
+        #         await asyncio.sleep(0.07)  # задержка чтоб не заблокировали
 
-            except TelegramBadRequest:
-                pass
+        #     except TelegramBadRequest:
+        #         pass
 
     await callback.message.edit_text(LEXICON['admin_event_creation_canceled'], reply_markup=kb.back_to_menu())
 

@@ -57,6 +57,18 @@ async def menu_command_handler(message: Message):
     pass
 
 
+@router.message(F.text == buttons['help'])
+async def help_button_handler(message: Message, state: FSMContext):
+    await message.answer(LEXICON['help'])
+
+    await state.set_state(UserState.default_state)
+
+
+@router.callback_query(F.data == callbacks[buttons['help']], IsNotRegistration())
+async def help_button_handler(callback: CallbackQuery):
+    await callback.message.answer(LEXICON['help'])
+
+
 @router.message(F.text == buttons['upcoming_events'], IsNotRegistration())
 async def start_button_handler(message: Message):
     events: list[dict] = await db.get_all_events()
@@ -84,13 +96,13 @@ async def event_info_handler(callback: CallbackQuery):
     keyboard = None if await db.check_registration(event.id, callback.from_user.id) \
         else kb.beer_pong_registration() if event.id == BEER_PONG_EVENT_ID \
         else kb.register_to_event(event.id)
-    keyboard = kb.beer_pong_registration_visitor() if await db.check_team_limit() else keyboard
+    keyboard = kb.beer_pong_registration_visitor() if not await db.check_team_limit() else keyboard
 
     registration = '\n\n✅ Вы уже зарегистрированы на это мероприятие' \
         if await db.check_registration(event.id, callback.from_user.id) else ''
 
     await callback.message.edit_text(
-        text=LEXICON['event_info'].format(event.name, event.description, event.date, registration),
+        text=LEXICON['event_info'].format(event.name, event.description, registration),
         reply_markup=keyboard
     )  # TODO: добавить кнопку "назад"
 
@@ -253,7 +265,7 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
     elif data['registration_to_event']:
         event = await db.get_event(data['registration_to_event'])
         await callback.message.answer(
-            text=LEXICON['event_info'].format(event.name, event.description, event.date),
+            text=LEXICON['event_info'].format(event.name, event.description, ''),
             reply_markup=kb.register_to_event(event.id)  # TODO: добавить кнопку "назад"
         )
 
@@ -302,6 +314,7 @@ async def help_button_handler(callback: CallbackQuery):
     await callback.message.answer(LEXICON['help'])
 
 
+
 @router.callback_query(F.data.startswith('beer_pong_registration'))
 async def beer_pong_registration_handler(callback: CallbackQuery):
     as_visitor = (callback.data.split('_')[-1] == 'visitor')
@@ -323,7 +336,7 @@ async def beer_pong_registration_handler(callback: CallbackQuery):
     elif not await db.check_team_limit():
         await callback.answer('К сожалению, места закончились', show_alert=True)
         return await callback.message.edit_text(
-            text=LEXICON['event_info'].format(event.name, event.description, event.date, ''),
+            text=LEXICON['event_info'].format(event.name, event.description, ''),
             reply_markup=kb.beer_pong_registration_visitor()
         )
 
