@@ -200,7 +200,6 @@ class DataBase:
 
                 return False
 
-
     # BeerPong 25.12.2024
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,

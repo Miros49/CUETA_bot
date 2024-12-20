@@ -14,11 +14,11 @@ async def validate_and_format_phone_number(phone_number: str) -> dict:
     elif cleaned_number.startswith('8'):
         cleaned_number = '7' + cleaned_number[1:]  # Заменяем '8' на '7'
     elif not cleaned_number.startswith('7'):
-        return {'valid': False, 'reason': 'Номер должен начинаться с +7, 7, или 8.'}
+        return {'valid': False, 'reason': 'Номер должен начинаться с +7, 7, или 8'}
 
     # Проверяем длину номера (10 цифр после кода страны)
     if len(cleaned_number) != 11 or not cleaned_number.isdigit():
-        return {'valid': False, 'reason': 'Неверное количество цифр в номере.'}
+        return {'valid': False, 'reason': 'Неверное количество цифр в номере'}
 
     # Форматируем номер в '+7 (XXX) XXX-XX-XX'
     formatted_number = f"+7 ({cleaned_number[1:4]}) {cleaned_number[4:7]}-{cleaned_number[7:9]}-{cleaned_number[9:]}"
@@ -55,11 +55,11 @@ async def convert_string_to_date(date_str: str) -> Optional[datetime.date]:
 def validate_date_of_birth(date_of_birth: str) -> dict:
     # Проверяем формат по длине
     if not re.fullmatch(r"\d{2}\.\d{2}\.\d{4}", date_of_birth):
-        return {'valid': False, 'reason': 'Введите дату своего рождения в формате: дд.мм.гггг. Например: 08.09.2006.'}
+        return {'valid': False, 'reason': 'Введите дату своего рождения в формате ДД.ММ.ГГГГ:'}
 
     try:
         datetime.strptime(date_of_birth, "%d.%m.%Y")  # проверка формата
     except ValueError:
-        return {'valid': False, 'reason': 'Введите дату своего рождения в формате: дд.мм.гггг. Например: 08.09.2006.'}
+        return {'valid': False, 'reason': 'Введите дату своего рождения в формате ДД.ММ.ГГГГ:'}
 
     return {'valid': True}

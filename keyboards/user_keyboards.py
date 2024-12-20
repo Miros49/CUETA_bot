@@ -60,7 +60,28 @@ class UserKeyboards:
     def cancel_registration() -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         kb.row(
-            InlineKeyboardButton(text=buttons['cancel_registration'], callback_data=callbacks['cancel_registration'])
+            InlineKeyboardButton(text=buttons['cancel_registration'],
+                                 callback_data=callbacks[buttons['cancel_registration']])
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def profile_registration_back_to_name() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.row(
+            InlineKeyboardButton(text=buttons['back_button'],
+                                 callback_data=callbacks['profile_registration_back_to_name'])
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def profile_registration_back_to_status() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.row(
+            InlineKeyboardButton(text=buttons['back_button'],
+                                 callback_data=callbacks['profile_registration_back_to_status'])
         )
 
         return kb.as_markup()
@@ -73,9 +94,13 @@ class UserKeyboards:
                                  callback_data=callbacks[buttons['registration_status_bachelor-cu']]),
             InlineKeyboardButton(text=buttons['registration_status_master-cu'],
                                  callback_data=callbacks[buttons['registration_status_master-cu']]),
+            InlineKeyboardButton(text=buttons['registration_status_t-bank'],
+                                 callback_data=callbacks[buttons['registration_status_t-bank']]),
             InlineKeyboardButton(text=buttons['registration_status_other'],
-                                 callback_data=callbacks[buttons['registration_status_other']])
-        ).adjust(1)
+                                 callback_data=callbacks[buttons['registration_status_other']]),
+            InlineKeyboardButton(text=buttons['back_button'],
+                                 callback_data=callbacks['profile_registration_back_to_date_of_birth'])
+        ).adjust(2)
 
         return kb.as_markup()
 
@@ -95,8 +120,10 @@ class UserKeyboards:
             InlineKeyboardButton(text=buttons['confirm_registration'],
                                  callback_data=callbacks[buttons['confirm_registration']]),
             InlineKeyboardButton(text=buttons['cancel_registration'],
-                                 callback_data=callbacks[buttons['cancel_registration']])
-        )
+                                 callback_data=callbacks[buttons['cancel_registration']]),
+            InlineKeyboardButton(text=buttons['back_button'],
+                                 callback_data=callbacks['profile_registration_back_to_phone_number'])
+        ).adjust(2)
 
         return kb.as_markup()
 
@@ -139,7 +166,7 @@ class UserKeyboards:
         kb = InlineKeyboardBuilder()
         kb.row(
             InlineKeyboardButton(text='❌ Отменить регистрацию',
-                                 callback_data=callbacks['cancel_registration_on_beer_pong'])
+                                 callback_data=callbacks[f'cancel_registration_on_beer_pong_{role}'])
         )
 
         return kb.as_markup()
