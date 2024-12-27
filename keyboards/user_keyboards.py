@@ -166,7 +166,7 @@ class UserKeyboards:
         kb = InlineKeyboardBuilder()
         kb.row(
             InlineKeyboardButton(text='❌ Отменить регистрацию',
-                                 callback_data=callbacks[f'cancel_registration_on_beer_pong_{role}'])
+                                 callback_data=callbacks['cancel_registration_on_beer_pong'].format(role))
         )
 
         return kb.as_markup()

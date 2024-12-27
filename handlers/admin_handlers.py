@@ -3,17 +3,16 @@ import asyncio
 from aiogram import F, Router, exceptions
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 
-from core import bot
+from core import bot, config
 from database import db
 from filters import IsAdmin
 from keyboards import AdminKeyboards, UserKeyboards
 from lexicon import LEXICON, callbacks, buttons
 from states import AdminState
 from utils import convert_string_to_date
-
 
 router: Router = Router()
 kb: AdminKeyboards = AdminKeyboards()
@@ -30,13 +29,139 @@ async def admin_manu_handler(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == callbacks[buttons['admin_back_to_menu']])
-async def admin_menu_callback_handler(callback: CallbackQuery):
-    await callback.message.edit_text(LEXICON['admin_menu'], reply_markup=kb.menu())
+async def admin_menu_callback_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(LEXICON['admin_menu'].format(callback.from_user.first_name),
+                                     reply_markup=kb.menu())
+
+    await state.set_state(AdminState.default_state)
 
 
 @router.callback_query(F.data == callbacks[buttons['admin_mailing']])
 async def mailing_handler(callback: CallbackQuery):
-    await callback.message.edit_text(LEXICON['dev'].format(callback.from_user.first_name), reply_markup=kb.menu())
+    await callback.message.edit_text(LEXICON['admin_mailing_options'], reply_markup=kb.mailing_options())
+
+
+@router.callback_query(F.data.startswith('admin_mailing_options'))
+async def admin_mailing_options_callback_handler(callback: CallbackQuery, state: FSMContext):
+    additional_message = await callback.message.edit_text(LEXICON['admin_enter_mailing_message'])
+
+    await state.set_state(AdminState.enter_mailing_message)
+    await state.update_data(additional_message_id=additional_message.message_id)
+
+
+@router.message(StateFilter(AdminState.enter_mailing_message))
+async def enter_mailing_message_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+    await bot.delete_message(message.chat.id, data['additional_message_id'])
+
+    if message.text:
+        message_type = 'text'
+        item = message.text
+        caption = None
+
+    elif message.photo:
+        message_type = 'photo'
+        item = message.photo[0].file_id
+        caption = message.caption if message.caption else ''
+
+    elif message.video:
+        message_type = 'video'
+        item = message.video.file_id
+        caption = message.caption if message.caption else ''
+
+    elif message.sticker:
+        message_type = 'sticker'
+        item = message.sticker.file_id
+        caption = None
+
+    elif message.voice:
+        message_type = 'voice'
+        item = message.voice.file_id
+        caption = message.caption if message.caption else '⠀'
+
+    elif message.video_note:
+        message_type = 'video_note'
+        item = message.video_note.file_id
+        caption = None
+
+    elif message.animation:
+        message_type = 'animation'
+        item = message.animation.file_id
+        caption = message.caption if message.caption else ''
+
+    else:
+        await bot.delete_message(message.chat.id, message.message_id)
+        mes = await message.answer('Извините, на данный момент данный тип сообщений не поддерживается')
+        await asyncio.sleep(2)
+        return await mes.delete()
+
+    send_method = {
+        'text': bot.send_message,
+        'photo': bot.send_photo,
+        'video': bot.send_video,
+        'sticker': bot.send_sticker,
+        'voice': bot.send_voice,
+        'video_note': bot.send_video_note,
+        'animation': bot.send_animation,
+    }
+
+    if message_type == 'text':
+        await send_method[message_type](message.from_user.id, item, reply_markup=kb.confirm_mailing())
+
+    elif not caption:
+        await send_method[message_type](message.from_user.id, item)
+
+    else:
+        await send_method[message_type](message.from_user.id, item, caption=caption, reply_markup=kb.confirm_mailing())
+
+    await state.set_state(AdminState.default_state)
+    await state.update_data(message_type=message_type, item=item, caption=caption)
+
+
+@router.callback_query(F.data == callbacks[buttons['initiate_mailing']])
+async def initiate_mailing_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+
+    await bot.edit_message_reply_markup(
+        chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+        reply_markup=None
+    )
+
+    if not (data.get('message_type') and data.get('item')):
+        print(data)
+        return await callback.answer('Для этого вам необходимо заново инициализировать рассылку', show_alert=True)
+    else:
+        mes = await callback.message.answer('⏳ Начинаю рассылку...')
+
+    message_type, item, caption = data.get('message_type'),  data.get('item'), data.get('caption', None)
+
+    send_method = {
+        'text': bot.send_message,
+        'photo': bot.send_photo,
+        'video': bot.send_video,
+        'sticker': bot.send_sticker,
+        'voice': bot.send_voice,
+        'video_note': bot.send_video_note,
+        'animation': bot.send_animation,
+    }
+
+    print(len(await db.get_event_registrations(1)), '\n\n', await db.get_event_registrations(1))
+
+    for user_id in await db.get_event_registrations(1):
+        try:
+            if not caption:
+                await send_method[message_type](user_id, item)
+            else:
+                await send_method[message_type](user_id, item, caption=caption)
+
+            await asyncio.sleep(0.07)  # задержка чтоб не заблокировали
+
+        except TelegramBadRequest:
+            pass
+
+    await mes.edit_text('✅ Рассылка завершена!')
 
 
 @router.callback_query(F.data == callbacks[buttons['admin_events']])
@@ -98,6 +223,15 @@ async def event_date_handler(message: Message, state: FSMContext):
 
     await state.update_data(event_date=message.text)
     await state.set_state(AdminState.default_state)
+
+
+@router.message(F.text == 'списки')
+async def send_registrations_list(message: Message):
+    if message.from_user.id in config.tg_bot.admin_ids:
+        file_path = await db.generate_registration_report(1)
+        file = FSInputFile(file_path)
+
+        await message.answer_document(file)
 
 
 @router.callback_query(F.data.in_(

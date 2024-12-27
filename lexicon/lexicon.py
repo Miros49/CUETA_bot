@@ -85,6 +85,8 @@ LEXICON: dict[str, str | list[str]] = {
                            '📝 Описание: {}\n'
                            '📆 Дата: <i>{}</i></b>',
     'admin_event_creation_canceled': '<b>🗑 Создание мероприятия отменено</b>',
+    'admin_mailing_options': '<b>Для кого сделать рассылку?</b>',
+    'admin_enter_mailing_message': '<b>Введите сообщение для рассылки (не будет отправлено без подтверждения)</b>',
 }
 
 buttons: dict[str, str] = {
@@ -119,6 +121,9 @@ buttons: dict[str, str] = {
     'admin_creation_of_event_confirm': '✅ Подтвердить',
     'admin_creation_of_event_cancel': '❌ Отменить',
     'admin_edit_event': '✏️ Изменить мероприятие',
+    'admin_mailing_options_all': 'Для всех (пока не работает)',
+    'admin_mailing_options_event-participants': 'Для посетителей Бир-Понга',
+    'initiate_mailing': '📤 Начать рассылку',
 }
 
 callbacks: dict[str, str] = {
@@ -157,6 +162,9 @@ callbacks: dict[str, str] = {
     buttons['admin_creation_of_event_confirm']: 'admin_creation_of_event_confirm',
     buttons['admin_creation_of_event_cancel']: 'admin_creation_of_event_cancel',
     buttons['admin_edit_event']: 'admin_edit_event_{}',
+    buttons['admin_mailing_options_all']: 'admin_mailing_options_all',
+    buttons['admin_mailing_options_event-participants']: 'admin_mailing_options_event-participants',
+    buttons['initiate_mailing']: 'admin_initiate_mailing',
 }
 
 status_callback_to_string: dict[str, str] = {

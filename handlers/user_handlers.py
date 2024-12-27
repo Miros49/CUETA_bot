@@ -40,7 +40,7 @@ async def start(message: Message, state: FSMContext):
             if player_1_id == message.from_user.id:
                 return await message.answer(LEXICON['ref_error'])
             elif await db.is_user_in_team(message.from_user.id):
-                return await message.answer(LEXICON['re_abuse'])
+                return await message.answer(LEXICON['ref_abuse'])
 
             try:
                 player_1 = await db.get_user(player_1_id)
