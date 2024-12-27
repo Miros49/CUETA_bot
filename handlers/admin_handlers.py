@@ -108,7 +108,8 @@ async def enter_mailing_message_handler(message: Message, state: FSMContext):
     }
 
     if message_type == 'text':
-        await send_method[message_type](message.from_user.id, item, reply_markup=kb.confirm_mailing())
+        await send_method[message_type](message.from_user.id, item, disable_web_page_preview=True,
+                                        reply_markup=kb.confirm_mailing())
 
     elif not caption:
         await send_method[message_type](message.from_user.id, item)
@@ -135,7 +136,7 @@ async def initiate_mailing_handler(callback: CallbackQuery, state: FSMContext):
     else:
         mes = await callback.message.answer('⏳ Начинаю рассылку...')
 
-    message_type, item, caption = data.get('message_type'),  data.get('item'), data.get('caption', None)
+    message_type, item, caption = data.get('message_type'), data.get('item'), data.get('caption', None)
 
     send_method = {
         'text': bot.send_message,
@@ -152,7 +153,7 @@ async def initiate_mailing_handler(callback: CallbackQuery, state: FSMContext):
     for user_id in await db.get_event_registrations(1):
         try:
             if not caption:
-                await send_method[message_type](user_id, item)
+                await send_method[message_type](user_id, item, disable_web_page_preview=True)
             else:
                 await send_method[message_type](user_id, item, caption=caption)
 
@@ -275,6 +276,17 @@ async def create_event_handler(callback: CallbackQuery, state: FSMContext):
     await callback.message.edit_text(LEXICON['admin_event_creation_canceled'], reply_markup=kb.back_to_menu())
 
 
+# @router.message(F.text == 'рассылка')  # TODO: это временное решение. нужно убрать этот колхоз
+# async def beer_pong_mailing_handler(message: Message):
+#     form_link = ('https://docs.google.com/forms/d/15n5kIpaH1zOaPWjkyCqOSBO67uUOmnKlGznhfihVX20/'
+#                  'viewform?edit_requested=true')
+#     text = (
+#         'Спасибо, что провёл вечер с нами! 😉\n\n'
+#         '<b>Наша цель</b> — создавать для тебя яркие моменты и помогать ощутить себя частью '
+#         'большого студенческого сообщества.\n\n'
+#         '<b>Расскажи как все прошло для тебя!</b> Твое мнение поможет нам стать еще лучше.'
+#         f'<b>Создали для тебя <a href="{form_link}">короткую форму</a></b>'
+#     )
 
 
 def todo() -> None:
