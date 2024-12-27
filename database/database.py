@@ -1,5 +1,7 @@
 import pandas as pd
 
+import pandas as pd
+
 from typing import List
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -242,6 +244,14 @@ class DataBase:
                     session.add(new_team)
                     await session.commit()
                     return None
+
+    async def get_event_registrations(self, event_id: int) -> List[User]:
+        async with self.async_session() as session:
+            async with session.begin():
+                # Join Registration and User tables to fetch users for the given event_id
+                query = select(Registration).where(Registration.event_id == event_id)
+                result = await session.execute(query)
+                return [user.user_id for user in result.scalars().all()]
 
     async def is_user_in_team(self, user_id: int) -> bool:
         """

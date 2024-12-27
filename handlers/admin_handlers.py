@@ -14,7 +14,6 @@ from lexicon import LEXICON, callbacks, buttons
 from states import AdminState
 from utils import convert_string_to_date
 
-
 router: Router = Router()
 kb: AdminKeyboards = AdminKeyboards()
 
@@ -30,8 +29,11 @@ async def admin_manu_handler(message: Message, state: FSMContext):
 
 
 @router.callback_query(F.data == callbacks[buttons['admin_back_to_menu']])
-async def admin_menu_callback_handler(callback: CallbackQuery):
-    await callback.message.edit_text(LEXICON['admin_menu'], reply_markup=kb.menu())
+async def admin_menu_callback_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(LEXICON['admin_menu'].format(callback.from_user.first_name),
+                                     reply_markup=kb.menu())
+
+    await state.set_state(AdminState.default_state)
 
 
 @router.callback_query(F.data == callbacks[buttons['admin_mailing']])

@@ -13,7 +13,7 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = 'users'
     id = Column(BigInteger, primary_key=True)
-    username = Column(String, unique=True, nullable=False)
+    username = Column(String, unique=True)
     name = Column(String)
     date_of_birth = Column(Date)
     status = Column(String)
