@@ -22,14 +22,15 @@ LEXICON: dict[str, str | list[str]] = {
                   '{}</b>',
     'you_need_to_sign_in': '<b>Похоже, вы ещё не зарегистрировались в системе.\n'
                            'Введите, пожалуйста, Ваше <u>ФИО</u>:</b>',
+    'sign_in_enter_name': '<b>Введите, пожалуйста, Ваше <u>ФИО</u>:</b>',
+    'sign_in_enter_name_again': "<b>Неверный формат ввода 🤕\n"
+                                "Пожалуйста, попробуйте ещё раз (в формате 'Фамилия Имя Отчество'):</b>",
     'sign_in_enter_date_of_birth': '<b>Приятно познакомиться, {}! 😊\n'
-                                   'Теперь укажи, пожалуйста, дату твоего рождения </b>',
-    'sign_in_enter_date_of_birth_again': '<b>{} 🤕\n'
+                                   'Теперь укажи, пожалуйста, дату твоего рождения '
+                                   '(в формате <code>ДД.ММ.ГГГГ</code>):</b>',
+    'sign_in_enter_date_of_birth_again': '<b>{}\n'
                                          'Попробуй ещё раз:</b>',
     'sign_in_enter_status': '<b>Хорошо!\nТеперь укажи свой статус:</b>\n',
-    'sign_in_enter_status_again': '<b>Статус введён некорректно 🤕\n Пожалуйста, выбери один из этих вариантов:\n'
-                                  '🔹 <code>Бакалавр ЦУ</code>\n🔹 <code>Магистрант ЦУ</code>\n '
-                                  '🔹<code>Другое</code></b>',
     'sign_in_enter_phone_number': '<b>Отлично! Осталось только указать номер телефона 😉</b>',
     'sign_in_enter_phone_number_additional': '<b>Можешь <i>нажать на кнопку снизу 👇</i>, либо написать его вручную</b>',
     'sign_in_enter_phone_number_again': '<b>{} 🤕\n'
@@ -55,6 +56,7 @@ LEXICON: dict[str, str | list[str]] = {
     'beer_pong_team_registered': '<b>✅ Регистрация команды завершена!\n\n'
                                  'Напарник: @{}\n'
                                  'Номер команды: <code>{}</code>.\n\n'
+                                 'Скоро свяжемся с тобой по оплате,\n'
                                  'До встречи на мероприятии! 🤗</b>',
     'beer_pong_team_just_created': '<b>✅ Мы подобрали для тебя напарника для участия в мероприятии '
                                    '<u>{}</u> - @{}.\nКоманда зарегистрирована под номером <code>{}</code>.\n'
@@ -83,12 +85,17 @@ LEXICON: dict[str, str | list[str]] = {
                            '📝 Описание: {}\n'
                            '📆 Дата: <i>{}</i></b>',
     'admin_event_creation_canceled': '<b>🗑 Создание мероприятия отменено</b>',
+    'admin_mailing_options': '<b>Для кого сделать рассылку?</b>',
+    'admin_enter_mailing_message': '<b>Введите сообщение для рассылки (не будет отправлено без подтверждения)</b>',
 }
 
 buttons: dict[str, str] = {
+
+    # ---------------------   USER   --------------------- #
     'upcoming_events': '📋 Список ближайших мероприятий',
     'profile': '👤 Профиль',
     'help': 'ℹ️ Помощь',
+    'back_button': '🔙 Назад',
     'menu': 'Меню',
     'back_to_menu': 'В меню',
     'event_registration_standard': '📝 Зарегистрироваться',
@@ -97,13 +104,16 @@ buttons: dict[str, str] = {
     'cancel_registration': '❌ Отмена',
     'registration_status_bachelor-cu': 'Бакалавр ЦУ',
     'registration_status_master-cu': 'Магистрант ЦУ',
+    'registration_status_t-bank': 'Сотрудник Т-Банка',
     'registration_status_other': 'Другое',
 
+    # ---------------------   BeerPong   --------------------- #
     'beer_pong_registration_visitor': '👀 Приду посмотреть (бесплатно)',
     'beer_pong_registration_player': '🍺 Буду играть! (1000₽)',
     'beer_pong_player_team_registration': '🤝 У меня есть напарник',
     'beer_pong_player_team_creation': '🤚 У меня нет напарника',
 
+    # ---------------------   ADMIN   --------------------- #
     'admin_mailing': '📢 Рассылка',
     'admin_events': '📋 Мероприятия',
     'admin_back_to_menu': '⏪ В меню',
@@ -111,9 +121,14 @@ buttons: dict[str, str] = {
     'admin_creation_of_event_confirm': '✅ Подтвердить',
     'admin_creation_of_event_cancel': '❌ Отменить',
     'admin_edit_event': '✏️ Изменить мероприятие',
+    'admin_mailing_options_all': 'Для всех (пока не работает)',
+    'admin_mailing_options_event-participants': 'Для посетителей Бир-Понга',
+    'initiate_mailing': '📤 Начать рассылку',
 }
 
 callbacks: dict[str, str] = {
+
+    # ---------------------   USER   --------------------- #
     buttons['upcoming_events']: 'events_button',
     buttons['profile']: 'profile_button',
     buttons['help']: 'help_button',
@@ -123,14 +138,23 @@ callbacks: dict[str, str] = {
     buttons['cancel_registration']: 'registration_canceled',
     buttons['registration_status_bachelor-cu']: 'registration_status_bachelor-cu',
     buttons['registration_status_master-cu']: 'registration_status_master-cu',
+    buttons['registration_status_t-bank']: 'registration_status_t-bank',
     buttons['registration_status_other']: 'registration_status_other',
 
+    # ---------------------   Back   --------------------- #
+    'profile_registration_back_to_name': 'profile_registration_back_to_name',
+    'profile_registration_back_to_date_of_birth': 'profile_registration_back_to_date-of-birth',
+    'profile_registration_back_to_status': 'profile_registration_back_to_status',
+    'profile_registration_back_to_phone_number': 'profile_registration_back_to_phone-number',
+
+    # ---------------------   BeerPong   --------------------- #
     buttons['beer_pong_registration_visitor']: 'beer_pong_registration_visitor',
     buttons['beer_pong_registration_player']: 'beer_pong_registration_player',
     buttons['beer_pong_player_team_registration']: 'beer_pong_player_team_registration',
     buttons['beer_pong_player_team_creation']: 'beer_pong_player_team_creation',
     'cancel_registration_on_beer_pong': 'cancel_registration_beer_pong_{}',
 
+    # ---------------------   ADMIN   --------------------- #
     buttons['admin_mailing']: 'admin_mailing',
     buttons['admin_events']: 'admin_events',
     buttons['admin_back_to_menu']: 'admin_main_menu',
@@ -138,10 +162,14 @@ callbacks: dict[str, str] = {
     buttons['admin_creation_of_event_confirm']: 'admin_creation_of_event_confirm',
     buttons['admin_creation_of_event_cancel']: 'admin_creation_of_event_cancel',
     buttons['admin_edit_event']: 'admin_edit_event_{}',
+    buttons['admin_mailing_options_all']: 'admin_mailing_options_all',
+    buttons['admin_mailing_options_event-participants']: 'admin_mailing_options_event-participants',
+    buttons['initiate_mailing']: 'admin_initiate_mailing',
 }
 
 status_callback_to_string: dict[str, str] = {
     'registration_status_bachelor-cu': buttons['registration_status_bachelor-cu'],
     'registration_status_master-cu': buttons['registration_status_master-cu'],
-    'registration_status_other': buttons['registration_status_other']
+    'registration_status_other': buttons['registration_status_other'],
+    'registration_status_t-bank': buttons['registration_status_t-bank']
 }

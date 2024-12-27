@@ -1,5 +1,6 @@
-from typing import List
+import pandas as pd
 
+from typing import List
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -200,7 +201,6 @@ class DataBase:
 
                 return False
 
-
     # BeerPong 25.12.2024
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
@@ -258,3 +258,68 @@ class DataBase:
                 team = result.scalars().first()
 
                 return team is not None
+            
+    async def get_event_registrations(self, event_id: int) -> List[User]:
+        async with self.async_session() as session:
+            async with session.begin():
+                # Join Registration and User tables to fetch users for the given event_id
+                query = select(Registration).where(Registration.event_id == event_id)
+                result = await session.execute(query)
+                return [user.user_id for user in result.scalars().all()]
+
+
+    async def generate_registration_report(self, event_id: int) -> str:
+        async with self.async_session() as session:
+            async with session.begin():
+                # Запрос всех зарегистрированных пользователей на событие
+                query = select(
+                    User.id,
+                    User.username,
+                    User.name,
+                    User.status,
+                    User.phone_number,
+                    User.date_of_birth,
+                    BeerPongTeam.player_1_username,
+                    BeerPongTeam.player_2_username
+                ).join(
+                    Registration, User.id == Registration.user_id
+                ).outerjoin(
+                    BeerPongTeam, (User.id == BeerPongTeam.player_1_id) | (User.id == BeerPongTeam.player_2_id)
+                ).where(
+                    Registration.event_id == event_id
+                )
+
+                result = await session.execute(query)
+                rows = result.all()
+
+                data = []
+                for row in rows:
+                    user_in_team = row.player_1_username if row.player_1_username == row.username else row.player_2_username
+                    teammate = row.player_2_username if row.player_1_username == row.username else row.player_1_username
+
+                    if user_in_team:
+                        data.append({
+                            'Username': f'@{row.username}',
+                            'ФИО': row.name,
+                            'Статус': row.status,
+                            'Номер телефона': row.phone_number,
+                            'Дата рождения': row.date_of_birth,
+                            'Участвует в бир-понге': 'ДА' if user_in_team else 'НЕТ',
+                            'Напарник': teammate if teammate else 'N/A'
+                        })
+
+                # Создаем Excel
+                df = pd.DataFrame(data)
+                file_path = f'BeerPong_registrations.xlsx'
+                df.to_excel(file_path, index=False)
+
+                with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Registrations')
+                    worksheet = writer.sheets['Registrations']
+
+                    # Автоматическая настройка ширины столбцов
+                    for idx, col in enumerate(df.columns):
+                        max_len = df[col].astype(str).map(len).max() + 2
+                        worksheet.set_column(idx, idx, max_len)
+
+                return file_path

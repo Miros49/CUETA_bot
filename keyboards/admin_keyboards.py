@@ -50,3 +50,27 @@ class AdminKeyboards:
         )
 
         return kb.as_markup()
+    
+    @staticmethod
+    def mailing_options() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['admin_mailing_options_all'],
+                                 callback_data=callbacks[buttons['admin_mailing_options_all']]),
+            InlineKeyboardButton(text=buttons['admin_mailing_options_event-participants'],
+                                 callback_data=callbacks[buttons['admin_mailing_options_event-participants']]),
+            InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['admin_back_to_menu']])
+        ).adjust(2, 1)
+
+        return kb.as_markup()
+
+    @staticmethod
+    def confirm_mailing() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['initiate_mailing'],
+                                 callback_data=callbacks[buttons['initiate_mailing']]),
+            InlineKeyboardButton(text='❌ Отмена', callback_data=callbacks[buttons['admin_back_to_menu']])
+        ).adjust(1)
+
+        return kb.as_markup()

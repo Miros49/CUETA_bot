@@ -16,6 +16,13 @@ router: Router = Router()
 kb: UserKeyboards = UserKeyboards()
 
 
+@router.message(Command('cls'))
+async def cls(message: Message, state: FSMContext):
+    await message.delete()
+
+    await state.set_state(UserState.default_state)
+
+
 @router.message(CommandStart())
 async def start(message: Message, state: FSMContext):
     await state.set_state(UserState.default_state)
@@ -33,7 +40,7 @@ async def start(message: Message, state: FSMContext):
             if player_1_id == message.from_user.id:
                 return await message.answer(LEXICON['ref_error'])
             elif await db.is_user_in_team(message.from_user.id):
-                return await message.answer(LEXICON['re_abuse'])
+                return await message.answer(LEXICON['ref_abuse'])
 
             try:
                 player_1 = await db.get_user(player_1_id)
@@ -69,6 +76,22 @@ async def help_button_handler(message: Message, state: FSMContext):
 @router.callback_query(F.data == callbacks[buttons['help']], IsNotRegistration())
 async def help_button_handler(callback: CallbackQuery):
     await callback.message.answer(LEXICON['help'])
+
+
+@router.message(F.text == buttons['profile'], IsNotRegistration())
+async def profile_message_handler(message: Message, state: FSMContext):
+    user = await db.get_user(message.from_user.id)
+
+    if not (user.name and user.date_of_birth):
+        message = await message.answer(LEXICON['you_need_to_sign_in'], reply_markup=kb.cancel_registration())
+
+        await state.set_state(UserState.sign_in_enter_name)
+        return await state.update_data(registration_message_id=message.message_id, show_profile=True)
+
+    await message.answer(
+        text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
+        reply_markup=kb.start()
+    )
 
 
 @router.message(F.text == buttons['upcoming_events'], IsNotRegistration())
@@ -143,7 +166,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     event = await db.get_event(event_id)
 
     if not (user.name and user.date_of_birth) and standard_registration:
-        message = await callback.message.edit_text(LEXICON['you_need_to_sign_in'])  # TODO: кнопка отмены ведёт в меню
+        message = await callback.message.edit_text(LEXICON['you_need_to_sign_in'])
 
         await state.set_state(UserState.sign_in_enter_name)
         return await state.update_data(registration_message_id=message.message_id, registration_to_event=event_id)
@@ -162,23 +185,25 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
 @router.message(StateFilter(UserState.sign_in_enter_name))
 async def sign_in_enter_name_handler(message: Message, state: FSMContext):
     data = await state.get_data()
+    name = message.text.strip()
 
     await message.delete()
 
-    name = message.text
-    if len(name.split()) != 3:  # TODO: сделать норм систему проверки правильности
+    if len(name.split()) != 3:
         try:
             return await bot.edit_message_text(
                 chat_id=message.chat.id, message_id=data['registration_message_id'],
-                text='Неверный формат ввода имени. Попробуйте ещё раз'
-            )  # TODO: кнопка назад на предыдущий этап
+                text=LEXICON['sign_in_enter_name_again'],  # TODO: если нет отчества
+                reply_markup=kb.cancel_registration()
+            )
         except TelegramBadRequest:
-            pass
+            return
 
     await bot.edit_message_text(
         chat_id=message.chat.id, message_id=data['registration_message_id'],
-        text=LEXICON['sign_in_enter_date_of_birth'].format(name.split()[1])
-    )  # TODO: кнопку на предыдущий этап
+        text=LEXICON['sign_in_enter_date_of_birth'].format(name.split()[1]),
+        reply_markup=kb.profile_registration_back_to_name()
+    )
 
     await state.set_state(UserState.sign_in_enter_date_of_birth)
     await state.update_data(name=name)
@@ -192,23 +217,22 @@ async def sign_in_enter_date_of_birth_handler(message: Message, state: FSMContex
 
     date_of_birth = message.text
     validation_check = validate_date_of_birth(date_of_birth)
-    print(validation_check)
 
     if not validation_check['valid']:
         try:
-            await bot.edit_message_text(
+            return await bot.edit_message_text(
                 chat_id=message.chat.id, message_id=data['registration_message_id'],
-                text=LEXICON['sign_in_enter_date_of_birth_again'].format(validation_check['reason'])
-            )  # TODO: кнопка назад на предыдущий этап
+                text=LEXICON['sign_in_enter_date_of_birth_again'].format(validation_check['reason']),
+                reply_markup=kb.profile_registration_back_to_name()
+            )
         except TelegramBadRequest:
-            pass
-        return
+            return
 
     await bot.edit_message_text(
         chat_id=message.chat.id, message_id=data['registration_message_id'],
         text=LEXICON['sign_in_enter_status'],
         reply_markup=kb.enter_status()
-    )  # TODO: кнопку на предыдущий этап
+    )
 
     await state.set_state(UserState.sign_in_enter_status)
     await state.update_data(date_of_birth=date_of_birth)
@@ -217,15 +241,16 @@ async def sign_in_enter_date_of_birth_handler(message: Message, state: FSMContex
 @router.callback_query(
     F.data.in_([
         callbacks[buttons['registration_status_bachelor-cu']], callbacks[buttons['registration_status_master-cu']],
-        callbacks[buttons['registration_status_other']]]),
+        callbacks[buttons['registration_status_other']], callbacks[buttons['registration_status_t-bank']]]),
     StateFilter(UserState.sign_in_enter_status)
 )
 async def sign_in_enter_status_handler(callback: CallbackQuery, state: FSMContext):
     status = status_callback_to_string.get(callback.data, 'unknown')
 
     await callback.message.edit_text(
-        text=LEXICON['sign_in_enter_phone_number']
-    )  # TODO: кнопку на предыдущий этап
+        text=LEXICON['sign_in_enter_phone_number'],
+        reply_markup=kb.profile_registration_back_to_status()
+    )
 
     additional_message = await callback.message.answer(
         text=LEXICON['sign_in_enter_phone_number_additional'],
@@ -247,13 +272,13 @@ async def sign_in_enter_status_handler(message: Message, state: FSMContext):
 
     if not phone_number['valid']:
         try:
-            await bot.edit_message_text(
+            return await bot.edit_message_text(
                 chat_id=message.chat.id, message_id=data['registration_message_id'],
-                text=LEXICON['sign_in_enter_phone_number_again'].format(phone_number['reason'])
-            )  # TODO: кнопка назад на предыдущий этап
+                text=LEXICON['sign_in_enter_phone_number_again'].format(phone_number['reason']),
+                reply_markup=kb.profile_registration_back_to_status()
+            )
         except TelegramBadRequest:
-            pass
-        return
+            return
 
     await bot.delete_message(message.chat.id, data['registration_additional_message_id'])
     await bot.edit_message_text(
@@ -267,6 +292,58 @@ async def sign_in_enter_status_handler(message: Message, state: FSMContext):
     await state.update_data(phone_number=phone_number['formatted'])
 
 
+@router.callback_query(F.data.startswith('profile_registration_back_to'))
+async def profile_registration_back_to_callback(callback: CallbackQuery, state: FSMContext):
+    state_value = await state.get_state()
+    data = await state.get_data()
+
+    destination = callback.data.split('_')[-1]
+
+    if state_value not in (
+            UserState.sign_in_enter_name, UserState.sign_in_enter_date_of_birth,
+            UserState.sign_in_enter_status, UserState.sign_in_enter_phone_number
+    ) or (state_value in (UserState.default_state, None) and destination != 'phone-number'):
+        print(destination, state_value)
+        await callback.answer('Для этого перейдите в профиль')
+        return await bot.edit_message_reply_markup(
+            chat_id=callback.message.chat.id, message_id=callback.message.message_id, reply_markup=None
+        )
+
+    if destination == 'name':
+        await callback.message.edit_text(
+            text=LEXICON['sign_in_enter_name'],
+            reply_markup=kb.cancel_registration() if not data.get('registration_to_event', None) else None
+        )
+        await state.set_state(UserState.sign_in_enter_name)
+
+    elif destination == 'date-of-birth':
+        await callback.message.edit_text(
+            text=LEXICON['sign_in_enter_date_of_birth'].format(data['name'].split('_')[1]),
+            reply_markup=kb.profile_registration_back_to_name()
+        )
+        await state.set_state(UserState.sign_in_enter_date_of_birth)
+
+    elif destination == 'status':
+        await callback.message.edit_text(
+            text=LEXICON['sign_in_enter_status'],
+            reply_markup=kb.enter_status()
+        )
+        await bot.delete_message(chat_id=callback.message.chat.id,
+                                 message_id=data['registration_additional_message_id'])
+        await state.set_state(UserState.sign_in_enter_status)
+
+    else:
+        await callback.message.edit_text(
+            text=LEXICON['sign_in_enter_phone_number'],
+            reply_markup=kb.profile_registration_back_to_status()
+        )
+        await callback.message.answer(
+            text=LEXICON['sign_in_enter_phone_number_additional'],
+            reply_markup=kb.request_phone_number()
+        )
+        await state.set_state(UserState.sign_in_enter_phone_number)
+
+
 @router.callback_query(
     F.data.in_([callbacks[buttons['confirm_registration']], callbacks[buttons['cancel_registration']]])
 )
@@ -274,7 +351,8 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
     data = await state.get_data()
 
     if callback.data.split('_')[-1] == 'canceled':
-        return await callback.message.edit_text('Регистрация отменена')
+        await callback.message.edit_text('<b>✅ Регистрация отменена</b>')
+        return await state.set_state(UserState.default_state)
 
     date_of_birth = await convert_string_to_date(data['date_of_birth'])
 
@@ -296,22 +374,6 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
             text=LEXICON['event_info'].format(event.name, event.description, ''),
             reply_markup=kb.register_to_event(event.id)  # TODO: добавить кнопку "назад"
         )
-
-
-@router.message(F.text == buttons['profile'], IsNotRegistration())
-async def profile_message_handler(message: Message, state: FSMContext):
-    user = await db.get_user(message.from_user.id)
-
-    if not (user.name and user.date_of_birth):
-        message = await message.answer(LEXICON['you_need_to_sign_in'])  # TODO: кнопка отмены ведёт в меню
-
-        await state.set_state(UserState.sign_in_enter_name)
-        return await state.update_data(registration_message_id=message.message_id, show_profile=True)
-
-    await message.answer(
-        text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
-        reply_markup=kb.start()
-    )
 
 
 @router.callback_query(F.data == callbacks[buttons['profile']], IsNotRegistration())
@@ -366,22 +428,16 @@ async def beer_pong_player_handler(callback: CallbackQuery):
     if callback.data.split('_')[-1] == 'registration':
         invite_link = f'https://t.me/CUETA_events_bot?start=beer_pong_invite_{callback.from_user.id}'
 
-        # try:
-        #     await db.create_registration(BEER_PONG_EVENT_ID, callback.from_user.id)
-        # except Exception as e:
-        #     print(f"\nНе удалось зарегистрировать пользователя на бирпонг (с тимой):\n{e}\n")
-        #     return await callback.message.edit_text(LEXICON['error_occurred'])
-
         return await callback.message.edit_text(
             text=LEXICON['beer_pong_registrate_team'].format(invite_link)
         )
 
-    # try:
-    team = await db.join_team(callback.from_user.id, callback.from_user.username)
-    await db.create_registration(BEER_PONG_EVENT_ID, callback.from_user.id)
-    # except Exception as e:
-    #     print(f"\nОшибка при попытке инициализации команды на бирпонг:\n{e}\n")
-    #     return await callback.message.edit_text(LEXICON['error_occurred'])
+    try:
+        team = await db.join_team(callback.from_user.id, callback.from_user.username)
+        await db.create_registration(BEER_PONG_EVENT_ID, callback.from_user.id)
+    except Exception as e:
+        print(f"\nОшибка при попытке инициализации команды на бирпонг:\n{e}\n")
+        return await callback.message.edit_text(LEXICON['error_occurred'])
 
     if team:
         event = await db.get_event(BEER_PONG_EVENT_ID)
@@ -405,7 +461,7 @@ async def beer_pong_player_handler(callback: CallbackQuery):
 
 def todo() -> None:
     """
-    none
+        None
     """
 
     return None

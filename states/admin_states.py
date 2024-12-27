@@ -6,3 +6,5 @@ class AdminState(StatesGroup):
     enter_event_name: State = State()
     enter_event_description: State = State()
     enter_event_date: State = State()
+
+    enter_mailing_message: State = State()  # стоит вынести в отдельный класс
