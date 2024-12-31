@@ -1,7 +1,7 @@
 import asyncio
 
 from aiogram import F, Router, exceptions
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command, StateFilter
 from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
@@ -157,9 +157,15 @@ async def initiate_mailing_handler(callback: CallbackQuery, state: FSMContext):
             else:
                 await send_method[message_type](user_id, item, caption=caption)
 
-            await asyncio.sleep(0.07)  # задержка чтоб не заблокировали
+            await asyncio.sleep(0.1)  # задержка чтоб не заблокировали
 
         except TelegramBadRequest:
+            pass
+
+        except TelegramForbiddenError:
+            pass
+
+        except Exception:
             pass
 
     await mes.edit_text('✅ Рассылка завершена!')
