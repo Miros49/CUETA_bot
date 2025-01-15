@@ -40,6 +40,13 @@ class AdminKeyboards:
         return kb.as_markup()
 
     @staticmethod
+    def skip_event_card() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.row(InlineKeyboardButton(text='⏩ Пропустить', callback_data='skip'))  # TODO: вынести в лексикон
+
+        return kb.as_markup()
+
+    @staticmethod
     def confirm_creation_of_event():
         kb = InlineKeyboardBuilder()
         kb.row(

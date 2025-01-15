@@ -19,21 +19,21 @@ class UserKeyboards:
 
         return kb
 
-    @staticmethod
-    def menu() -> InlineKeyboardMarkup:
-        kb = InlineKeyboardBuilder()
-        kb.add(
-            InlineKeyboardButton(text=buttons['upcoming_events'], callback_data=callbacks[buttons['upcoming_events']]),
-            InlineKeyboardButton(text=buttons['profile'], callback_data=callbacks[buttons['profile']]),
-            InlineKeyboardButton(text=buttons['help'], callback_data=callbacks[buttons['help']])
-        ).adjust(1, 2)
-
-    @staticmethod
-    def back_to_menu() -> InlineKeyboardMarkup:
-        kb = InlineKeyboardBuilder()
-        kb.row(
-            InlineKeyboardButton(text=buttons['back_to_menu'], callback_data=callbacks[buttons['back_to_menu']])
-        )
+    # @staticmethod
+    # def menu() -> InlineKeyboardMarkup:
+    #     kb = InlineKeyboardBuilder()
+    #     kb.add(
+    #         InlineKeyboardButton(text=buttons['upcoming_events'], callback_data=callbacks[ ]),
+    #         InlineKeyboardButton(text=buttons['profile'], callback_data=callbacks[buttons['profile']]),
+    #         InlineKeyboardButton(text=buttons['help'], callback_data=callbacks[buttons['help']])
+    #     ).adjust(1, 2)
+    #
+    # @staticmethod
+    # def back_to_menu() -> InlineKeyboardMarkup:
+    #     kb = InlineKeyboardBuilder()
+    #     kb.row(
+    #         InlineKeyboardButton(text=buttons['back_to_menu'], callback_data=callbacks[buttons['back_to_menu']])
+    #     )
 
     @staticmethod
     def events_list(events: List[dict]) -> InlineKeyboardMarkup:
@@ -42,7 +42,7 @@ class UserKeyboards:
         for event in events:  # TODO: добавлять мероприятие только если оно ещё не прошло
             kb.add(InlineKeyboardButton(text=event['name'], callback_data=f'event_info_{event["id"]}'))
 
-        return kb.as_markup()
+        return kb.adjust(1).as_markup()
 
     @staticmethod
     def register_to_event(event_id: int) -> InlineKeyboardMarkup:
@@ -50,8 +50,13 @@ class UserKeyboards:
         kb.add(
             InlineKeyboardButton(text=buttons['event_registration_standard'],
                                  callback_data=callbacks[buttons['event_registration_standard']].format(event_id)),
-            InlineKeyboardButton(text=buttons['event_registration_fast'],
-                                 callback_data=callbacks[buttons['event_registration_fast']].format(event_id))
+            # InlineKeyboardButton(text=buttons['event_registration_premium'],
+            #                      callback_data=callbacks[buttons['event_registration_premium']].format(event_id)),
+
+            # InlineKeyboardButton(text=buttons['event_registration_fast'],
+            #                      callback_data=callbacks[buttons['event_registration_fast']].format(event_id)),
+
+            InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['upcoming_events']])
         ).adjust(1)
 
         return kb.as_markup()

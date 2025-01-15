@@ -165,7 +165,8 @@ async def initiate_mailing_handler(callback: CallbackQuery, state: FSMContext):
         except TelegramForbiddenError:
             pass
 
-        except Exception:
+        except Exception as e:
+            print(f'Некритическая ошибка при попытке рассылки: {e}')
             pass
 
     await mes.edit_text('✅ Рассылка завершена!')
@@ -173,7 +174,7 @@ async def initiate_mailing_handler(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == callbacks[buttons['admin_events']])
 async def events_handler(callback: CallbackQuery):
-    events = await db.get_all_events()
+    events = await db.get_upcoming_events()
 
     await callback.message.edit_text(LEXICON['events_list'], reply_markup=kb.upcoming_events(events))
 
@@ -223,13 +224,100 @@ async def event_date_handler(message: Message, state: FSMContext):
 
     await bot.edit_message_text(
         chat_id=message.chat.id, message_id=data['event_creation_message_id'],
-        text=LEXICON['admin_create_event'].format(
+        text=LEXICON['admin_add_event_card'].format(
             data['event_name'], data['event_description'], message.text
-        ), reply_markup=kb.confirm_creation_of_event()
+        ), reply_markup=kb.skip_event_card()
     )
 
     await state.update_data(event_date=message.text)
+    await state.set_state(AdminState.enter_event_card)
+
+
+@router.message(StateFilter(AdminState.enter_event_card))
+async def event_card_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    if not message.photo:
+        return await bot.edit_message_text(
+            chat_id=message.chat.id, message_id=data['event_creation_message_id'],
+            text=LEXICON['admin_add_event_card'].format(
+                data['event_name'], data['event_description'], data['event_date']
+            ), reply_markup=kb.skip_event_card()
+        )
+
+    await bot.delete_message(chat_id=message.chat.id, message_id=data['event_creation_message_id'])
+    await message.answer_photo(
+        photo=message.photo[-1].file_id,
+        caption=LEXICON['admin_create_event'].format(
+            data['event_name'], data['event_description'], data['event_date']
+        ), reply_markup=kb.confirm_creation_of_event()
+    )
+
+    await state.update_data(event_photo_id=message.photo[-1].file_id)
     await state.set_state(AdminState.default_state)
+
+
+@router.callback_query(F.data == 'skip', StateFilter(AdminState.enter_event_card))
+async def create_event_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+
+    await callback.message.edit_text(
+        text=LEXICON['admin_create_event'].format(
+            data['event_name'], data['event_description'], data['event_date']
+        ), reply_markup=kb.confirm_creation_of_event()
+    )
+
+    await state.update_data(event_photo_id=None)
+    await state.set_state(AdminState.default_state)
+
+
+@router.callback_query(F.data.in_(
+    [callbacks[buttons['admin_creation_of_event_confirm']], callbacks[buttons['admin_creation_of_event_cancel']]])
+)
+async def create_event_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+
+    if callback.data.split('_')[-1] != 'confirm':
+        await callback.message.edit_text(LEXICON['admin_event_creation_canceled'], reply_markup=kb.back_to_menu())
+
+    try:
+        event_date = await convert_string_to_date(data['event_date'])
+
+        await db.create_event(data['event_name'], data['event_description'], event_date, data['event_photo_id'])
+
+    except Exception as e:
+        print(f'Ошибка при попытке создания мероприятия: {e}')
+
+        return await callback.message.answer(LEXICON['error_occurred'])
+
+    if callback.message.photo:
+        await callback.message.edit_caption(
+            caption=LEXICON['admin_event_created'].format(
+                data['event_name'], data['event_description'], data['event_date']
+            ),  # TODO: сюда кнопку удаления мероприятия
+        )
+    else:
+        await callback.message.edit_text(
+            text=LEXICON['admin_event_created'].format(
+                data['event_name'], data['event_description'], data['event_date']
+            ),  # TODO: и сюда
+        )
+
+    # for user in await db.get_all_users():
+    #     try:
+    #         await bot.send_message(
+    #             chat_id=user.id,
+    #             text=LEXICON['new_event_notification'].format(
+    #                 data['event_name'], data['event_description'], data['event_date']
+    #             ),
+    #             reply_markup=UserKeyboards.register_to_event(event_id)
+    #         )
+    #         await asyncio.sleep(0.07)  # задержка чтоб не заблокировали
+
+    #     except TelegramBadRequest:
+    #         pass
 
 
 @router.message(F.text == 'списки')
@@ -239,62 +327,3 @@ async def send_registrations_list(message: Message):
         file = FSInputFile(file_path)
 
         await message.answer_document(file)
-
-
-@router.callback_query(F.data.in_(
-    [callbacks[buttons['admin_creation_of_event_confirm']], callbacks[buttons['admin_creation_of_event_cancel']]])
-)
-async def create_event_handler(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-
-    if callback.data.split('_')[-1] == 'confirm':
-        try:
-            event_date = await convert_string_to_date(data['event_date'])
-
-            event_id = await db.create_event(data['event_name'], data['event_description'], event_date)
-
-        except Exception as e:
-            print(f'Ошибка при попытке создания мероприятия: {e}')
-
-            return await callback.message.answer(LEXICON['error_occurred'])
-
-        await callback.message.edit_text(
-            text=LEXICON['admin_event_created'].format(
-                data['event_name'], data['event_description'], data['event_date']
-            ),  # TODO: написать функцию, которая будет вытаскивать значения из сообщения
-            # TODO: сюда же кнопку удаления мероприятия
-        )
-
-        # for user in await db.get_all_users():
-        #     try:
-        #         await bot.send_message(
-        #             chat_id=user.id,
-        #             text=LEXICON['new_event_notification'].format(
-        #                 data['event_name'], data['event_description'], data['event_date']
-        #             ),
-        #             reply_markup=UserKeyboards.register_to_event(event_id)
-        #         )
-        #         await asyncio.sleep(0.07)  # задержка чтоб не заблокировали
-
-        #     except TelegramBadRequest:
-        #         pass
-
-    await callback.message.edit_text(LEXICON['admin_event_creation_canceled'], reply_markup=kb.back_to_menu())
-
-
-# @router.message(F.text == 'рассылка')  # TODO: это временное решение. нужно убрать этот колхоз
-# async def beer_pong_mailing_handler(message: Message):
-#     form_link = ('https://docs.google.com/forms/d/15n5kIpaH1zOaPWjkyCqOSBO67uUOmnKlGznhfihVX20/'
-#                  'viewform?edit_requested=true')
-#     text = (
-#         'Спасибо, что провёл вечер с нами! 😉\n\n'
-#         '<b>Наша цель</b> — создавать для тебя яркие моменты и помогать ощутить себя частью '
-#         'большого студенческого сообщества.\n\n'
-#         '<b>Расскажи как все прошло для тебя!</b> Твое мнение поможет нам стать еще лучше.'
-#         f'<b>Создали для тебя <a href="{form_link}">короткую форму</a></b>'
-#     )
-
-
-def todo() -> None:
-    # TODO: вместо кнопки помощь "по вопросам пишите туда"
-    return None

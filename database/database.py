@@ -6,7 +6,7 @@ from typing import List
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from . import User, Event, Registration, BeerPongTeam
 
@@ -23,12 +23,12 @@ class DataBase:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    # USER
+    # -------------------------------   USER   -------------------------------
 
-    async def init_user(self, user_id: int, username: str):
+    async def init_user(self, user_id: int, username: str | None):
         async with self.async_session() as session:
             async with session.begin():
-                user = User(id=user_id, username=username)
+                user = User(id=user_id, username=username if username else None)
                 session.add(user)
                 await session.commit()
                 return user.id
@@ -68,7 +68,7 @@ class DataBase:
                 user.phone_number = phone_number
                 await session.commit()
 
-    # # ADMIN
+    # # -------------------------------   ADMIN   -------------------------------
     #
     # async def get_admins_ids(self):
     #     async with self.async_session() as session:
@@ -112,17 +112,17 @@ class DataBase:
     #                 await session.commit()
     #                 return True
 
-    # EVENT
+    # -------------------------------   EVENT   -------------------------------
 
-    async def create_event(self, name: str, description: str, event_date: date):
-        all_events = await self.get_all_events()
+    async def create_event(self, name: str, description: str, event_date: date, photo_id: str | None):
+        all_events = await self.get_upcoming_events()
 
         for event in all_events:  # Check for duplicate event
             if event["name"] == name and event["date"] == event_date:
                 raise ValueError(f'An event with name "{name}" on {event_date} already exists.')
         async with self.async_session() as session:
             async with session.begin():
-                new_event = Event(name=name, description=description, date=event_date)
+                new_event = Event(name=name, description=description, date=event_date, photo_id=photo_id)
                 session.add(new_event)
                 await session.commit()
 
@@ -137,6 +137,21 @@ class DataBase:
 
                 return event
 
+    async def get_upcoming_events(self) -> List[dict]:
+        current_time = datetime.utcnow() + timedelta(hours=3)
+
+        async with self.async_session() as session:
+            async with session.begin():
+                # Фильтрация мероприятий, которые еще не прошли
+                query = select(Event).where(Event.date > current_time)
+                result = await session.execute(query)
+                events = result.scalars().all()
+
+                return [
+                    {"id": event.id, "name": event.name, "description": event.description, "date": event.date}
+                    for event in events
+                ]
+
     async def get_all_events(self) -> List[dict]:
         async with self.async_session() as session:
             async with session.begin():
@@ -149,7 +164,7 @@ class DataBase:
                     for event in events
                 ]
 
-    # Registration
+    # -------------------------------    Registration   -------------------------------
 
     async def create_registration(self, event_id: int, user_id: int) -> int:
         async with self.async_session() as session:
@@ -170,16 +185,6 @@ class DataBase:
                 registration = result.scalars().first()
 
                 return registration
-
-    async def check_team_limit(self) -> bool:
-        async with self.async_session() as session:
-            async with session.begin():
-                # Считаем количество строк в таблице BeerPongTeam
-                query = select(func.count()).select_from(BeerPongTeam)
-                result = await session.execute(query)
-                count = result.scalar()
-
-                return count <= 16
 
     async def remove_registration(self, event_id: int, user_id: int) -> bool:
         """
@@ -203,7 +208,7 @@ class DataBase:
 
                 return False
 
-    # BeerPong 25.12.2024
+    # -------------------------------   BeerPong 25.12.2024   -------------------------------
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
                           player_2_username: str) -> int:
@@ -217,6 +222,16 @@ class DataBase:
                 session.add(team)
                 await session.commit()
                 return team.id
+
+    async def check_team_limit(self) -> bool:
+        async with self.async_session() as session:
+            async with session.begin():
+                # Считаем количество строк в таблице BeerPongTeam
+                query = select(func.count()).select_from(BeerPongTeam)
+                result = await session.execute(query)
+                count = result.scalar()
+
+                return count <= 16
 
     async def join_team(self, player_id: int, player_username: str) -> BeerPongTeam | None:
         async with self.async_session() as session:
@@ -248,10 +263,9 @@ class DataBase:
     async def get_event_registrations(self, event_id: int) -> List[User]:
         async with self.async_session() as session:
             async with session.begin():
-                # Join Registration and User tables to fetch users for the given event_id
                 query = select(Registration).where(Registration.event_id == event_id)
                 result = await session.execute(query)
-                return [user.user_id for user in result.scalars().all()]
+                return list(set([user.user_id for user in result.scalars().all()]))
 
     async def is_user_in_team(self, user_id: int) -> bool:
         """
@@ -268,15 +282,6 @@ class DataBase:
                 team = result.scalars().first()
 
                 return team is not None
-            
-    async def get_event_registrations(self, event_id: int) -> List[User]:
-        async with self.async_session() as session:
-            async with session.begin():
-                # Join Registration and User tables to fetch users for the given event_id
-                query = select(Registration).where(Registration.event_id == event_id)
-                result = await session.execute(query)
-                return [user.user_id for user in result.scalars().all()]
-
 
     async def generate_registration_report(self, event_id: int) -> str:
         async with self.async_session() as session:
