@@ -50,6 +50,7 @@ LEXICON: dict[str, str | list[str]] = {
                        '📆 Дата рождения: <code>{}</code>\n'
                        '🔹 Статус: {}\n'
                        '📱 Номер телефона: <code>{}</code></b>',
+    'change_profile_info': '<b>Выберите, что вы хотите перезаписать:</b>',
 
     'beer_pong_registration_player': 'Скажите текст\nЕсть команда?',
     'beer_pong_registrate_team': '<b>Отлично! 😎\n'
@@ -103,6 +104,7 @@ buttons: dict[str, str] = {
     # ---------------------   USER   --------------------- #
     'upcoming_events': '📋 Список ближайших мероприятий',
     'profile': '👤 Профиль',
+    'change_profile_info': 'Изменить информацию профиля',
     'help': 'ℹ️ Помощь',
     'back_button': '🔙 Назад',
     'menu': 'Меню',
@@ -116,6 +118,10 @@ buttons: dict[str, str] = {
     'registration_status_master-cu': 'Магистрант ЦУ',
     'registration_status_t-bank': 'Сотрудник Т-Банка',
     'registration_status_other': 'Другое',
+    'change_name': 'Изменить имя',
+    'change_status': 'Изменить статус',
+    'change_date_of_birth': 'Изменить возраст',
+    'change_phone_number': 'Изменить номер телефона',
 
     # ---------------------   BeerPong   --------------------- #
     'beer_pong_registration_visitor': '👀 Приду посмотреть (бесплатно)',
@@ -140,6 +146,7 @@ callbacks: dict[str, str] = {
     # ---------------------   USER   --------------------- #
     buttons['upcoming_events']: 'events_button',
     buttons['profile']: 'profile_button',
+    buttons['change_profile_info']: 'change_profile_info_button',
     buttons['help']: 'help_button',
     buttons['event_registration_standard']: 'register_for_the_event_standard_{}',
     buttons['event_registration_premium']: 'register_for_the_event_premium_{}',
@@ -150,6 +157,10 @@ callbacks: dict[str, str] = {
     buttons['registration_status_master-cu']: 'registration_status_master-cu',
     buttons['registration_status_t-bank']: 'registration_status_t-bank',
     buttons['registration_status_other']: 'registration_status_other',
+    buttons['change_name']: 'change_name_button',
+    buttons['change_status']: 'change_status_button',
+    buttons['change_date_of_birth']: 'change_date_of_birth_button',
+    buttons['change_phone_number']: 'change_phone_number_button',
 
     # ---------------------   Back   --------------------- #
     'profile_registration_back_to_name': 'profile_registration_back_to_name',

@@ -175,3 +175,37 @@ class UserKeyboards:
         )
 
         return kb.as_markup()
+
+    @staticmethod
+    def profile_keyboard() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+
+        kb.row(
+            InlineKeyboardButton(text=buttons['change_profile_info'],
+                                 callback_data=callbacks[buttons['change_profile_info']]),
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def change_profile_info() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+
+        kb.row(
+            InlineKeyboardButton(text=buttons['change_name'],
+                                callback_data=callbacks[buttons['change_name']])
+        )
+        kb.row(
+            InlineKeyboardButton(text=buttons['change_status'],
+                                 callback_data=callbacks[buttons['change_status']])
+        )
+        kb.row(
+            InlineKeyboardButton(text=buttons['change_date_of_birth'],
+                                 callback_data=callbacks[buttons['change_date_of_birth']])
+        )
+        kb.row(
+            InlineKeyboardButton(text=buttons['change_phone_number'],
+                                 callback_data=callbacks[buttons['change_phone_number']])
+        )
+
+        return kb.as_markup()

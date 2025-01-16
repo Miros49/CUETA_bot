@@ -388,7 +388,15 @@ async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.answer(
         text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
-        reply_markup=kb.start()
+        reply_markup=kb.profile_keyboard()
+    )
+
+
+@router.callback_query(F.data == callbacks[buttons['change_profile_info']], IsNotRegistration())
+async def change_profile_info_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(
+        text=LEXICON['change_profile_info'],
+        reply_markup=kb.change_profile_info()
     )
 
 

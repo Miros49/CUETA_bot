@@ -16,3 +16,8 @@ class IsNotRegistration(Filter):
     async def __call__(self, message: Message, state: FSMContext, *args, **kwargs):
         state_value = await state.get_state()
         return state_value in [None, default_state]
+
+class IsChangingProfile(Filter):
+    async def __call__(self, message: Message, state: FSMContext, *args, **kwargs):
+        state_value = await state.get_state()
+        return state_value is
