@@ -131,7 +131,7 @@ async def event_info_handler(callback: CallbackQuery):
     await callback.message.delete()
     await callback.message.answer_photo(
         photo=event.photo_id,
-        caption=LEXICON['event_info'].format(event.name, event.description, event.date, registration),
+        caption=LEXICON['event_info'].format(event.description, registration),
         reply_markup=kb.register_to_event(event.id)
     )
 
@@ -371,7 +371,7 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
         event = await db.get_event(data['registration_to_event'])
         await callback.message.answer_photo(
             photo=event.photo_id,
-            caption=LEXICON['event_info'].format(event.name, event.description, event.date, ''),
+            caption=LEXICON['event_info'].format(event.description, ''),
             reply_markup=kb.register_to_event(event.id)
         )
 
