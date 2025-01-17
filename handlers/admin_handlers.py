@@ -226,7 +226,7 @@ async def event_date_handler(message: Message, state: FSMContext):
         chat_id=message.chat.id, message_id=data['event_creation_message_id'],
         text=LEXICON['admin_add_event_card'].format(
             data['event_name'], data['event_description'], message.text
-        ), reply_markup=kb.skip_event_card()
+        )
     )
 
     await state.update_data(event_date=message.text)
@@ -244,7 +244,7 @@ async def event_card_handler(message: Message, state: FSMContext):
             chat_id=message.chat.id, message_id=data['event_creation_message_id'],
             text=LEXICON['admin_add_event_card'].format(
                 data['event_name'], data['event_description'], data['event_date']
-            ), reply_markup=kb.skip_event_card()
+            )
         )
 
     await bot.delete_message(chat_id=message.chat.id, message_id=data['event_creation_message_id'])
@@ -256,20 +256,6 @@ async def event_card_handler(message: Message, state: FSMContext):
     )
 
     await state.update_data(event_photo_id=message.photo[-1].file_id)
-    await state.set_state(AdminState.default_state)
-
-
-@router.callback_query(F.data == 'skip', StateFilter(AdminState.enter_event_card))
-async def create_event_handler(callback: CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-
-    await callback.message.edit_text(
-        text=LEXICON['admin_create_event'].format(
-            data['event_name'], data['event_description'], data['event_date']
-        ), reply_markup=kb.confirm_creation_of_event()
-    )
-
-    await state.update_data(event_photo_id=None)
     await state.set_state(AdminState.default_state)
 
 

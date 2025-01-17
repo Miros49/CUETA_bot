@@ -45,19 +45,29 @@ class UserKeyboards:
         return kb.adjust(1).as_markup()
 
     @staticmethod
-    def register_to_event(event_id: int) -> InlineKeyboardMarkup:
+    def register_to_event(event_id: int, show_registration: bool) -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
-        kb.add(
-            InlineKeyboardButton(text=buttons['event_registration_standard'],
-                                 callback_data=callbacks[buttons['event_registration_standard']].format(event_id)),
-            # InlineKeyboardButton(text=buttons['event_registration_premium'],
-            #                      callback_data=callbacks[buttons['event_registration_premium']].format(event_id)),
+        if show_registration:
+            kb.add(
+                # InlineKeyboardButton(
+                #     text=buttons['event_registration_standard'],
+                #     callback_data=callbacks[buttons['event_registration_standard']].format(event_id)
+                # ),
+                InlineKeyboardButton(
+                    text=buttons['event_registration_pre-registration'],
+                    callback_data=callbacks[buttons['event_registration_pre-registration']].format(event_id)
+                ),
 
-            # InlineKeyboardButton(text=buttons['event_registration_fast'],
-            #                      callback_data=callbacks[buttons['event_registration_fast']].format(event_id)),
+                # InlineKeyboardButton(text=buttons['event_registration_premium'],
+                #                      callback_data=callbacks[buttons['event_registration_premium']].format(event_id)),
 
+                # InlineKeyboardButton(text=buttons['event_registration_fast'],
+                #                      callback_data=callbacks[buttons['event_registration_fast']].format(event_id)),
+            ).adjust(1)
+
+        kb.row(
             InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['upcoming_events']])
-        ).adjust(1)
+        )
 
         return kb.as_markup()
 

@@ -35,8 +35,9 @@ class Registration(Base):
     username = Column(String)
 
     registration_wave = Column(Integer, nullable=False)
-    type = Column(String, nullable=False)
+    registration_type = Column(String, nullable=False)
     fundraiser_id = Column(BigInteger, ForeignKey('fundraisers.id'))
+    split = Column(Boolean, default=False)
     status = Column(String, nullable=False)
 
 
