@@ -122,17 +122,21 @@ async def start_button_handler(callback: CallbackQuery):
 @router.callback_query(F.data.startswith('event_info'))
 async def event_info_handler(callback: CallbackQuery):
     event = await db.get_event(int(callback.data.split('_')[-1]))
+    registration = await db.check_registration(event.id, callback.from_user.id)
 
-    if await db.check_registration(event.id, callback.from_user.id):
-        registration = '\n\n✅ Вы уже зарегистрированы на это мероприятие'
-    else:
-        registration = ''
+    registration_text, kb_arg = '', True
+    if registration:
+        if registration.registration_type == 'pre-registration':
+            registration_text = LEXICON['pre-registration_to_event_confirmed']
+            kb_arg = False
+        else:
+            registration_text = '\n\n✅ Вы уже зарегистрированы на это мероприятие'
 
     await callback.message.delete()
     await callback.message.answer_photo(
         photo=event.photo_id,
         caption=LEXICON['event_info'].format(event.description, registration),
-        reply_markup=kb.register_to_event(event.id)
+        reply_markup=kb.register_to_event(event.id, kb_arg)
     )
 
 
@@ -162,7 +166,8 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     event = await db.get_event(event_id)
 
     if not user.name and user.date_of_birth:
-        message = await callback.message.edit_text(
+        await callback.message.delete()
+        message = await callback.message.answer(
             text=LEXICON['you_need_to_sign_in'],
             reply_markup=kb.cancel_registration()
         )
@@ -171,13 +176,15 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
         return await state.update_data(registration_message_id=message.message_id, registration_to_event=event_id)
 
     try:
-        await db.create_registration(event.id, user.id)
+        await db.create_registration(event.id, user.id, user.username, 0, registration_type, 0, 'processing')
     except Exception as e:
         print(f"\nОшибка при попытке регистрации пользователя {user.id}\n{e}\n")
-        return await callback.message.edit_text(LEXICON['error_occurred'])
+        await callback.message.delete()
+        return await callback.message.answer(LEXICON['error_occurred'])
 
-    await callback.message.edit_text(
-        text=LEXICON['registration_to_event_confirmed'].format(event.name, event.date)
+    await callback.message.edit_caption(
+        caption=LEXICON['event_info'].format(event.name, event.description,
+                                             LEXICON['pre-registration_to_event_confirmed']),
     )
 
 
@@ -372,7 +379,7 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
         await callback.message.answer_photo(
             photo=event.photo_id,
             caption=LEXICON['event_info'].format(event.description, ''),
-            reply_markup=kb.register_to_event(event.id)
+            reply_markup=kb.register_to_event(event.id, True)
         )
 
 
@@ -390,7 +397,6 @@ async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
         text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
         reply_markup=kb.start()
     )
-
 
 # @router.callback_query(F.data.startswith('beer_pong_registration'))
 # async def beer_pong_registration_handler(callback: CallbackQuery):

@@ -166,10 +166,19 @@ class DataBase:
 
     # -------------------------------    Registration   -------------------------------
 
-    async def create_registration(self, event_id: int, user_id: int) -> int:
+    async def create_registration(self, event_id: int, user_id: int, username: str | None, registration_wave: int,
+                                  registration_type: str, fundraiser_id: int, status: str) -> int:
         async with self.async_session() as session:
             async with session.begin():
-                registration = Registration(event_id=event_id, user_id=user_id)
+                registration: Registration = Registration(
+                    event_id=event_id,
+                    user_id=user_id,
+                    username=username,
+                    registration_wave=registration_wave,
+                    registration_type=registration_type,
+                    fundraiser_id=fundraiser_id,
+                    status=status
+                )
                 session.add(registration)
                 await session.commit()
 

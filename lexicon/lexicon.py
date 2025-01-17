@@ -43,11 +43,12 @@ LEXICON: dict[str, str | list[str]] = {
                             '📆 Дата рождения: <code>{}</code>\n'
                             '🔹 Статус: {}\n'
                             '📱 Номер телефона: <code>{}</code></b>',
-    'registration_to_event_confirmed': '<b>‼️ Для подтверждения регистрации на <i>{}</i>,'
-                                       'необходимо оплатить стоимость билета и <u>пристать чек</u>:\n\n'
-                                       '💵 Стоимость: <code>{}</code>₽\n'
-                                       '💳 Номер карты: <code>{}</code>\n\n'
-                                       '❓ По вопросам оплаты: @{}',
+    'pre-registration_to_event_confirmed': '\n✅ Оформлена предрегистрация на мероприятие.\nСкоро свяжемся с тобой 😎',
+    # '': '<b>‼️ Для подтверждения регистрации на <i>{}</i>,'
+    #                                    'необходимо оплатить стоимость билета и <u>пристать чек</u>:\n\n'
+    #                                    '💵 Стоимость: <code>{}</code>₽\n'
+    #                                    '💳 Номер карты: <code>{}</code>\n\n'
+    #                                    '❓ По вопросам оплаты: @{}',
     'profile_message': '<b>🪪 ФИО: <i>{}</i>\n'
                        '📆 Дата рождения: <code>{}</code>\n'
                        '🔹 Статус: {}\n'
@@ -109,6 +110,7 @@ buttons: dict[str, str] = {
     'back_button': '🔙 Назад',
     'menu': 'Меню',
     'back_to_menu': 'В меню',
+    'event_registration_pre-registration': 'Предрегистрация',
     'event_registration_standard': '📝 Зарегистрироваться',
     'event_registration_premium': 'Премиум',
     'event_registration_fast': '⚡️ Фаст-регистрация',
@@ -143,6 +145,7 @@ callbacks: dict[str, str] = {
     buttons['upcoming_events']: 'events_button',
     buttons['profile']: 'profile_button',
     buttons['help']: 'help_button',
+    buttons['event_registration_pre-registration']: 'register_for_the_event_pre-registration_{}',
     buttons['event_registration_standard']: 'register_for_the_event_standard_{}',
     buttons['event_registration_premium']: 'register_for_the_event_premium_{}',
     buttons['event_registration_fast']: 'register_for_the_event_fast_{}',
