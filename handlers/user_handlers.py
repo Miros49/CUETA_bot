@@ -388,6 +388,9 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
             reply_markup=kb.register_to_event(event.id, True)
         )
 
+        data.pop('registration_to_event', None)
+        await state.update_data(**data)
+
 
 @router.callback_query(F.data == callbacks[buttons['profile']], IsNotRegistration())
 async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
