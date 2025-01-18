@@ -184,7 +184,7 @@ class DataBase:
 
                 return registration.id
 
-    async def check_registration(self, event_id: int, user_id: int) -> Registration:
+    async def get_registration(self, event_id: int, user_id: int) -> Registration:
         async with self.async_session() as session:
             async with session.begin():
                 query = select(Registration).where(
@@ -216,6 +216,15 @@ class DataBase:
                     return True
 
                 return False
+
+    async def get_all_registrations(self, event_id: int) -> List[Registration]:
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.event_id == event_id)
+                result = await session.execute(query)
+                registrations = result.scalars().all()
+
+                return [registration for registration in registrations]
 
     # -------------------------------   BeerPong 25.12.2024   -------------------------------
 

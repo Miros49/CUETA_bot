@@ -122,7 +122,7 @@ async def start_button_handler(callback: CallbackQuery):
 @router.callback_query(F.data.startswith('event_info'))
 async def event_info_handler(callback: CallbackQuery):
     event = await db.get_event(int(callback.data.split('_')[-1]))
-    registration = await db.check_registration(event.id, callback.from_user.id)
+    registration = await db.get_registration(event.id, callback.from_user.id)
 
     registration_text, kb_arg = '', True
     if registration:
@@ -175,7 +175,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
         await state.set_state(UserState.sign_in_enter_name)
         return await state.update_data(registration_message_id=message.message_id, registration_to_event=event_id)
     
-    if await db.check_registration(event.id, callback.from_user.id):
+    if await db.get_registration(event.id, callback.from_user.id):
         await bot.edit_message_reply_markup(
             chat_id=callback.message.chat.id, message_id=callback.message.message_id,
             reply_markup=None
