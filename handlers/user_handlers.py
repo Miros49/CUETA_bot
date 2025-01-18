@@ -135,7 +135,7 @@ async def event_info_handler(callback: CallbackQuery):
     await callback.message.delete()
     await callback.message.answer_photo(
         photo=event.photo_id,
-        caption=LEXICON['event_info'].format(event.description, registration),
+        caption=LEXICON['event_info'].format(event.description, registration_text),
         reply_markup=kb.register_to_event(event.id, kb_arg)
     )
 
@@ -174,6 +174,13 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
 
         await state.set_state(UserState.sign_in_enter_name)
         return await state.update_data(registration_message_id=message.message_id, registration_to_event=event_id)
+    
+    if await db.check_registration(event.id, callback.from_user.id):
+        await bot.edit_message_reply_markup(
+            chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+            reply_markup=None
+        )
+        return await callback.answer('✅ Вы уже зарегистрированы на данное мероприятие', show_alert=True)
 
     try:
         await db.create_registration(event.id, user.id, user.username, 0, registration_type, 0, 'processing')
@@ -183,8 +190,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
         return await callback.message.answer(LEXICON['error_occurred'])
 
     await callback.message.edit_caption(
-        caption=LEXICON['event_info'].format(event.name, event.description,
-                                             LEXICON['pre-registration_to_event_confirmed']),
+        caption=LEXICON['event_info'].format(event.description, LEXICON['pre-registration_to_event_confirmed']),
     )
 
 
