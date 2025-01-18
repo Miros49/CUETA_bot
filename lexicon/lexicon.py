@@ -56,6 +56,10 @@ LEXICON: dict[str, str | list[str]] = {
                        '🔹 Статус: {}\n'
                        '📱 Номер телефона: <code>{}</code></b>',
 
+    'payment_confirmation_text': '<b>Хорошо! Пришлите, пожалуйста, файл или фото подтверждения об оплате:</b>',
+    'payment_confirmation_text_again': '<b>Вам необходимо прислать файл или фото подтверждения об оплате.\n'
+                                       'Попробуйте ещё раз:</b>',
+
     'beer_pong_registration_player': 'Скажите текст\nЕсть команда?',
     'beer_pong_registrate_team': '<b>Отлично! 😎\n'
                                  'Отправь <a href="{}">эту ссылку</a> своему напарнику для регистрации команды</b>',
@@ -124,7 +128,7 @@ buttons: dict[str, str] = {
     'registration_status_other': 'Другое',
 
     # ---------------------   USER   --------------------- #
-    'send_payment_confirmation': '✅ Скинуть подтверждении оплаты',
+    'payment_confirmation_button': '✅ Скинуть подтверждении оплаты',
 
     # ---------------------   BeerPong   --------------------- #
     'beer_pong_registration_visitor': '👀 Приду посмотреть (бесплатно)',
@@ -162,7 +166,8 @@ callbacks: dict[str, str] = {
     buttons['registration_status_other']: 'registration_status_other',
 
     # ---------------------   USER   --------------------- #
-    buttons['send_payment_confirmation']: 'send_payment_confirmation_{}',
+    buttons['payment_confirmation_button']: 'send_payment_confirmation_{}',
+    'cancel_payment_confirmation_button': 'cancel_payment_confirmation_{}',
 
     # ---------------------   Back   --------------------- #
     'profile_registration_back_to_name': 'profile_registration_back_to_name',

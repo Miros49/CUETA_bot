@@ -75,8 +75,18 @@ class UserKeyboards:
     def confirm_payment(event_id: int):
         kb = InlineKeyboardBuilder()
         kb.add(
-            InlineKeyboardButton(text=buttons['send_payment_confirmation'],
-                                 callback_data=callbacks[callbacks['send_payment_confirmation']].format(event_id))
+            InlineKeyboardButton(text=buttons['payment_confirmation_button'],
+                                 callback_data=callbacks[buttons['payment_confirmation_button']].format(event_id))
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def cancel_payment_confirmation(event_id: int):
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text='',
+                                 callback_data=callbacks['cancel_payment_confirmation_button'].format(event_id))
         )
 
         return kb.as_markup()
@@ -192,6 +202,20 @@ class UserKeyboards:
         kb.row(
             InlineKeyboardButton(text='❌ Отменить регистрацию',
                                  callback_data=callbacks['cancel_registration_on_beer_pong'].format(role))
+        )
+
+        return kb.as_markup()
+
+
+class FundraiserKeyboards:  # TODO: вынести в отдельный файл
+    @staticmethod
+    def confirm_payment(registration_id: int):
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(
+                text='✅ Подтвердить', callback_data=f'fundraiser_payment_confirmation_confirm_{registration_id}'),
+            InlineKeyboardButton(
+                text='❌ Фигню вкинул', callback_data=f'fundraiser_payment_confirmation_cancel_{registration_id}'),
         )
 
         return kb.as_markup()

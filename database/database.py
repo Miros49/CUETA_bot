@@ -1,7 +1,5 @@
 import pandas as pd
 
-import pandas as pd
-
 from typing import List
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -205,6 +203,19 @@ class DataBase:
 
                 return registration
 
+    async def get_registration_by_id(self, registration_id: int) -> Registration | None:
+        """
+        Возвращает запись о регистрации по ID.
+        :param registration_id: ID регистрации.
+        :return: Объект Registration, если запись найдена, иначе None.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+                return registration
+
     async def remove_registration(self, event_id: int, user_id: int) -> bool:
         """
         Снимает регистрацию пользователя с определённого события.
@@ -236,6 +247,24 @@ class DataBase:
 
                 return [registration for registration in registrations]
 
+    async def update_registration_status(self, registration_id: int, new_status: str):
+        """
+        Изменяет статус указанной регистрации.
+        :param registration_id: ID регистрации.
+        :param new_status: Новый статус для регистрации.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                if registration:
+                    registration.status = new_status
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
+
     async def assign_fundraiser_to_registration(self, registration_id: int, fundraiser_id: int):
         """
         Устанавливает указанный fundraiser_id для конкретной регистрации.
@@ -247,6 +276,24 @@ class DataBase:
                 registration = result.scalars().first()
                 if registration:
                     registration.fundraiser_id = fundraiser_id
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
+
+    async def set_first_warning(self, registration_id: int):
+        """
+        Устанавливает текущее дата и время в поле `first_warning` для указанной регистрации.
+        :param registration_id: ID регистрации.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                if registration:
+                    current_datetime = (datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")
+                    registration.first_warning = current_datetime
                     await session.commit()
                 else:
                     raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
@@ -384,11 +431,37 @@ class DataBase:
 
     # -------------------------------   FUNDRAISER   -------------------------------
 
-    async def get_fundraiser_with_least_registrations(self) -> FundRaiser:
-        """Возвращает сборщика с наименьшим числом number_of_registrations."""
+    async def get_fundraiser(self, fundraiser_id: int) -> FundRaiser | None:
+        """
+        Ищет сборщика по id.
+        :param fundraiser_id: id сборщика.
+        :return: Объект FundRaiser, если найден, иначе None.
+        """
         async with self.async_session() as session:
             async with session.begin():
-                query = select(FundRaiser).order_by(FundRaiser.number_of_registrations)
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
+                result = await session.execute(query)
+                return result.scalars().first()
+
+    async def get_all_fundraisers(self) -> list[FundRaiser]:
+        """
+        Возвращает список всех сборщиков.
+        :return: Список объектов FundRaiser.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser)
+                result = await session.execute(query)
+                return result.scalars().all()
+
+    async def get_fundraiser_with_least_registrations(self) -> FundRaiser | None:
+        """
+        Возвращает сборщика с наименьшим числом number_of_registrations,
+        учитывая только тех, у кого статус True (свободен).
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).where(FundRaiser.status == True).order_by(FundRaiser.number_of_registrations)
                 result = await session.execute(query)
                 return result.scalars().first()
 

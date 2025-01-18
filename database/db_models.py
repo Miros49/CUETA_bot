@@ -36,9 +36,10 @@ class Registration(Base):
 
     registration_wave = Column(Integer, nullable=False)
     registration_type = Column(String, nullable=False)
-    fundraiser_id = Column(BigInteger, ForeignKey('fundraisers.id'))
+    fundraiser_id = Column(BigInteger)  # ForeignKey('fundraisers.id')
     split = Column(Boolean, default=False)
     status = Column(String, nullable=False)
+    first_warning = Column(Date)
 
 
 class FundRaiser(Base):

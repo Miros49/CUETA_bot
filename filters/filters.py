@@ -16,3 +16,15 @@ class IsNotRegistration(Filter):
     async def __call__(self, message: Message, state: FSMContext, *args, **kwargs):
         state_value = await state.get_state()
         return state_value in [None, default_state]
+
+
+class IsFundraiser(Filter):
+    async def __call__(self, update: Message | CallbackQuery, *args, **kwargs):
+        """
+        Проверяет, является ли пользователь сборщиком.
+        :param update: Сообщение от пользователя.
+        :return: True, если пользователь является сборщиком, иначе False.
+        """
+        # Получение пользователя из базы данных
+        fundraiser = await db.get_fundraiser(update.from_user.id)
+        return fundraiser is not None

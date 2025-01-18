@@ -1,3 +1,5 @@
+from datetime import date, datetime, timedelta
+
 from aiogram import Router, F
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.types import Message, CallbackQuery
@@ -7,13 +9,14 @@ from aiogram.fsm.context import FSMContext
 from core import bot, BEER_PONG_EVENT_ID
 from database import db
 from filters import IsNotRegistration
-from keyboards import UserKeyboards
+from keyboards import UserKeyboards, FundraiserKeyboards
 from lexicon import LEXICON, buttons, callbacks, status_callback_to_string
 from states import UserState
 from utils import validate_and_format_phone_number, convert_string_to_date, validate_date_of_birth
 
 router: Router = Router()
 kb: UserKeyboards = UserKeyboards()
+fundraiser_kb: FundraiserKeyboards = FundraiserKeyboards()
 
 
 @router.message(Command('cls'))
@@ -164,6 +167,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     user = await db.get_user(callback.from_user.id)
     event_id = int(callback.data.split('_')[-1])
     event = await db.get_event(event_id)
+    registration = await db.get_registration(event.id, callback.from_user.id)
 
     if not (user.name and user.date_of_birth):
         await callback.message.delete()
@@ -174,8 +178,8 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
 
         await state.set_state(UserState.sign_in_enter_name)
         return await state.update_data(registration_message_id=message.message_id, registration_to_event=event_id)
-    
-    if await db.get_registration(event.id, callback.from_user.id):
+
+    if registration:
         await bot.edit_message_reply_markup(
             chat_id=callback.message.chat.id, message_id=callback.message.message_id,
             reply_markup=None
@@ -205,6 +209,16 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
 
     if send_instructions:
         try:
+            fundraiser = await db.get_fundraiser_with_least_registrations()
+            await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
+            await db.increment_registration_count(fundraiser.id)
+            await db.update_registration_status(registration.id, 'waiting_for_payment')
+            print(
+                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id}'
+                f'({("@" + registration.username) if registration.username else registration.user_id})\n'
+                f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
+            )
+            await db.set_first_warning(registration.id)
             await callback.message.answer(
                 text=LEXICON['payment_instructions'],
                 reply_markup=kb.confirm_payment(event.id)
@@ -212,6 +226,77 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
         except Exception as e:
             await callback.message.answer(LEXICON['error_occurred'])
             print(f'Ошибка при попытке отправки инструкции: {e}')
+
+
+@router.callback_query(F.data.startswith('send_payment_confirmation'))
+async def send_payment_confirmation(callback: CallbackQuery, state: FSMContext):
+    event_id = int(callback.data.split('_')[-1])
+    registration = await db.get_registration(event_id, callback.from_user.id)
+
+    await callback.message.edit_reply_markup(reply_markup=None)
+
+    if registration.status != 'waiting_for_payment':
+        print(
+            f'\n\nтипок не может скинуть подтверждение оплаты. '
+            f'статус регистрации: {registration.status}, пользователь: {callback.from_user.id}'
+        )
+        await state.set_state(UserState.default_state)
+        return await callback.answer(
+            'Что-то пошло не так. Пожалуйста, свяжись с назначенным тебе менеджером, если оплата всё ещё не завершена')
+
+    last_payment_confirmation_message_message_id = (
+        await callback.message.answer(
+            text=LEXICON['payment_confirmation_text'],
+            reply_markup=kb.cancel_payment_confirmation(event_id)
+        )
+    ).message_id
+
+    await db.update_registration_status(registration.id, 'ready_to_confirm_payment')
+
+    await state.set_state(UserState.send_payment_confirmation)
+    await state.update_data(event_id=event_id, registration_id=registration.id,  # TODO: нужно добавлять это раньше
+                            last_payment_confirmation_message_message_id=last_payment_confirmation_message_message_id)
+
+
+@router.message(StateFilter(UserState.send_payment_confirmation))
+async def send_payment_confirmation_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+    event_id, registration_id = data['event_id'], data['registration_id']
+    registration = await db.get_registration(registration_id)
+
+    try:
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id, message_id=data['last_payment_confirmation_message_message_id']
+        )
+    except Exception as e:
+        print(f'фигня с удалением клавиатурыы отмены поддтверждения: {e}')
+
+    if not (message.photo or message.document):
+        last_payment_confirmation_message_message_id = (
+            await message.answer(
+                text=LEXICON['payment_confirmation_text_again'],
+                reply_markup=kb.cancel_payment_confirmation(event_id)
+            )
+        ).message_id
+        return await state.update_data(
+            last_payment_confirmation_message_message_id=last_payment_confirmation_message_message_id
+        )
+
+    if message.photo:
+        await bot.send_photo(
+            chat_id=registration.fundraiser_id, photo=message.photo[-1].file_id,
+            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}',
+            reply_markup=fundraiser_kb.confirm_payment(registration_id)
+        )
+    else:
+        await bot.send_document(
+            chat_id=registration.fundraiser_id, document=message.document.file_id,
+            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}',
+            reply_markup=fundraiser_kb.confirm_payment(registration_id)
+        )
+
+    await message.answer('<b>Круто! 🔥\nОсталось только дождаться подтверждения оплаты. Скоро свяжемся с тобой 😉')
+    await db.update_registration_status(registration_id, 'waiting_for_fundraiser_confirmation')
 
 
 @router.message(StateFilter(UserState.sign_in_enter_name))

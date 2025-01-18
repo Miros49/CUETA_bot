@@ -313,3 +313,12 @@ async def send_registrations_list(message: Message):
         file = FSInputFile(file_path)
 
         await message.answer_document(file)
+
+
+@router.message(F.text == 'предрега')
+async def send_registrations_list(message: Message):
+    if message.from_user.id in config.tg_bot.admin_ids:
+        file_path = await db.generate_registration_report(1)
+        file = FSInputFile(file_path)
+
+        await message.answer_document(file)
