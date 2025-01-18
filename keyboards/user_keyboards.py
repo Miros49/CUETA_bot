@@ -72,6 +72,16 @@ class UserKeyboards:
         return kb.as_markup()
 
     @staticmethod
+    def confirm_payment(event_id: int):
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['send_payment_confirmation'],
+                                 callback_data=callbacks[callbacks['send_payment_confirmation']].format(event_id))
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
     def cancel_registration() -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         kb.row(

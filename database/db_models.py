@@ -47,6 +47,8 @@ class FundRaiser(Base):
     id = Column(BigInteger, primary_key=True)
     username = Column(String, unique=True)
     status = Column(Boolean, nullable=False)
+    phone_number = Column(String, nullable=False)
+    preferred_bank = Column(String, nullable=False)
 
     number_of_registrations = Column(Integer, nullable=False, default=0)
     waiting_for_verification = Column(Integer, nullable=False, default=0)

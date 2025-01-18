@@ -165,7 +165,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     event_id = int(callback.data.split('_')[-1])
     event = await db.get_event(event_id)
 
-    if not user.name and user.date_of_birth:
+    if not (user.name and user.date_of_birth):
         await callback.message.delete()
         message = await callback.message.answer(
             text=LEXICON['you_need_to_sign_in'],
@@ -189,9 +189,29 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
         await callback.message.delete()
         return await callback.message.answer(LEXICON['error_occurred'])
 
-    await callback.message.edit_caption(
-        caption=LEXICON['event_info'].format(event.description, LEXICON['pre-registration_to_event_confirmed']),
-    )
+    if 1:
+        additional_text = LEXICON['pre-registration_to_event_confirmed']
+        send_instructions = False
+    else:
+        additional_text = LEXICON['see_payment_instructions_below']
+        send_instructions = True
+
+    try:
+        await callback.message.edit_caption(
+            caption=LEXICON['event_info'].format(event.description, additional_text),
+        )
+    except Exception as e:
+        print(f'Ошибка при попытке изменения подписи (register_for_the_event_handler): {e}')
+
+    if send_instructions:
+        try:
+            await callback.message.answer(
+                text=LEXICON['payment_instructions'],
+                reply_markup=kb.confirm_payment(event.id)
+            )
+        except Exception as e:
+            await callback.message.answer(LEXICON['error_occurred'])
+            print(f'Ошибка при попытке отправки инструкции: {e}')
 
 
 @router.message(StateFilter(UserState.sign_in_enter_name))

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import date, datetime, timedelta
 
-from . import User, Event, Registration, BeerPongTeam
+from . import User, Event, Registration, BeerPongTeam, FundRaiser
 
 Base = declarative_base()
 
@@ -67,6 +67,16 @@ class DataBase:
                 user.status = status
                 user.phone_number = phone_number
                 await session.commit()
+
+    def is_user_adult(self, date_of_birth: date) -> bool:
+        """
+        Проверяет, исполнилось ли пользователю 18 лет.
+        :param date_of_birth: Дата рождения пользователя.
+        :return: True, если пользователю есть 18 лет, иначе False.
+        """
+        today = date.today()
+        age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+        return age >= 18
 
     # # -------------------------------   ADMIN   -------------------------------
     #
@@ -226,6 +236,21 @@ class DataBase:
 
                 return [registration for registration in registrations]
 
+    async def assign_fundraiser_to_registration(self, registration_id: int, fundraiser_id: int):
+        """
+        Устанавливает указанный fundraiser_id для конкретной регистрации.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+                if registration:
+                    registration.fundraiser_id = fundraiser_id
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
+
     # -------------------------------   BeerPong 25.12.2024   -------------------------------
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
@@ -356,3 +381,64 @@ class DataBase:
                         worksheet.set_column(idx, idx, max_len)
 
                 return file_path
+
+    # -------------------------------   FUNDRAISER   -------------------------------
+
+    async def get_fundraiser_with_least_registrations(self) -> FundRaiser:
+        """Возвращает сборщика с наименьшим числом number_of_registrations."""
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).order_by(FundRaiser.number_of_registrations)
+                result = await session.execute(query)
+                return result.scalars().first()
+
+    async def increment_registration_count(self, fundraiser_id: int):
+        """Добавляет в поле number_of_registrations одну регистрацию."""
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
+                result = await session.execute(query)
+                fundraiser = result.scalars().first()
+                if fundraiser:
+                    fundraiser.number_of_registrations += 1
+                    await session.commit()
+                else:
+                    raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
+
+    async def decrement_registration_and_increment_verification(self, fundraiser_id: int):
+        """
+        Удаляет одну регистрацию из number_of_registrations и добавляет одну в waiting_for_verification.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
+                result = await session.execute(query)
+                fundraiser = result.scalars().first()
+                if fundraiser:
+                    if fundraiser.number_of_registrations > 0:
+                        fundraiser.number_of_registrations -= 1
+                        fundraiser.waiting_for_verification += 1
+                        await session.commit()
+                    else:
+                        raise ValueError("Нет доступных регистраций для удаления.")
+                else:
+                    raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
+
+    async def move_verification_to_verified(self, fundraiser_id: int):
+        """
+        Удаляет одну запись из waiting_for_verification и добавляет одну в verified.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
+                result = await session.execute(query)
+                fundraiser = result.scalars().first()
+                if fundraiser:
+                    if fundraiser.waiting_for_verification > 0:
+                        fundraiser.waiting_for_verification -= 1
+                        fundraiser.verified += 1
+                        await session.commit()
+                    else:
+                        raise ValueError("Нет записей в ожидании подтверждения для перемещения.")
+                else:
+                    raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
