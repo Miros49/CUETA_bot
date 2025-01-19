@@ -101,11 +101,12 @@ async def start_button_handler(callback: CallbackQuery):
 
 
 @router.callback_query(F.data.startswith('event_info'))
-async def event_info_handler(callback: CallbackQuery):
+async def event_info_handler(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
     event = await db.get_event(int(callback.data.split('_')[-1]))
     registration = await db.get_registration(event.id, callback.from_user.id)
 
-    registration_text, kb_arg, kb_additional_arg = '', True, False
+    registration_text, kb_arg, kb_additional_arg, show_instruction = '', True, False, False
     if registration:
         kb_arg = False
         kb_additional_arg = True
@@ -123,7 +124,7 @@ async def event_info_handler(callback: CallbackQuery):
         photo=event.photo_id,
         caption=LEXICON['event_info'].format(event.description, registration_text),
         reply_markup=kb.register_to_event(event.id, kb_arg, kb_additional_arg)
-    )
+    )        
 
 
 @router.callback_query(F.data.startswith('cancel_registration_beer_pong'))
@@ -281,6 +282,19 @@ async def send_payment_confirmation_handler(message: Message, state: FSMContext)
     data = await state.get_data()
     event_id, registration_id = data['event_id'], data['registration_id']
     registration = await db.get_registration_by_id(registration_id)
+    event = await db.get_event(int(event_id))
+
+    if not registration.fundraiser_id:
+        print("для мироса (всё норм, это не ошибка)")
+        fundraiser = await db.get_fundraiser_with_least_registrations()
+        await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
+        await db.increment_registration_count(fundraiser.id)
+
+        print(
+            f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id}'
+            f'({("@" + registration.username) if registration.username else registration.user_id})\n'
+            f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
+        )
 
     try:
         await bot.edit_message_reply_markup(
@@ -514,7 +528,7 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
         user = await db.get_user(callback.from_user.id)
 
         try:
-            event = await db.get_event(8)
+            event = await db.get_event(2)
             fundraiser = await db.get_fundraiser_with_least_registrations()
             registration = await db.get_registration(event.id, callback.from_user.id)
             await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)

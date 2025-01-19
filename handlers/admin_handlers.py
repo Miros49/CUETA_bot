@@ -320,7 +320,7 @@ async def send_registrations_list(message: Message):
 
 @router.message(F.text == 'предрега')
 async def send_registrations_list(message: Message):
-    event = await db.get_event(event_id=8)
+    event = await db.get_event(event_id=2)
     registration_type = 'pre-registration'
     user_ids = await db.get_user_ids_from_registrations(event_id=event.id, registration_type=registration_type)
 
@@ -419,10 +419,13 @@ async def manual_registration(user_id: int, registration: Registration, error):
 
     await asyncio.sleep(0.1)
 
-    await bot.send_message(
-        chat_id=user_id,
-        text='<b>К сожалению, не смогли подобрать для вас сборщика из-за высокой нагрузки.\n'
-             'Скоро свяжемся с тобой! 🤗</b>'
-    )
+    try:
+        await bot.send_message(
+            chat_id=user_id,
+            text='<b>К сожалению, не смогли подобрать для вас сборщика из-за высокой нагрузки.\n'
+                'Скоро свяжемся с тобой! 🤗</b>'
+        )
+    except Exception as e:
+        print(e)
 
     return print(f'необходимо лично связаться с типом. ошибка: {error}')
