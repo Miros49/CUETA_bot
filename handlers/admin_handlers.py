@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta
 
 from aiogram import F, Router, exceptions
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
@@ -7,15 +8,17 @@ from aiogram.types import Message, CallbackQuery, FSInputFile
 from aiogram.fsm.context import FSMContext
 
 from core import bot, config
-from database import db
+from database import db, Registration
 from filters import IsAdmin
 from keyboards import AdminKeyboards, UserKeyboards
 from lexicon import LEXICON, callbacks, buttons
-from states import AdminState
-from utils import convert_string_to_date
+from states import AdminState, UserState
+from utils import convert_string_to_date, get_user_state
+from utils.utils import is_user_adult
 
 router: Router = Router()
 kb: AdminKeyboards = AdminKeyboards()
+user_kb: UserKeyboards = UserKeyboards()
 
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
@@ -313,3 +316,113 @@ async def send_registrations_list(message: Message):
         file = FSInputFile(file_path)
 
         await message.answer_document(file)
+
+
+@router.message(F.text == 'предрега')
+async def send_registrations_list(message: Message):
+    event = await db.get_event(event_id=8)
+    registration_type = 'pre-registration'
+    user_ids = await db.get_user_ids_from_registrations(event_id=event.id, registration_type=registration_type)
+
+    print(user_ids)
+
+    for user_id in user_ids:
+        user = await db.get_user(user_id)
+        registration = await db.get_registration(event.id, user_id)
+
+        if not (user.name and user.date_of_birth):
+            try:
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=LEXICON['pre-registration_mailing_no_profile'],
+                    disable_web_page_preview=True
+                )
+
+                pre_registration_message = await bot.send_message(
+                    chat_id=user_id,
+                    text=LEXICON['enter_your_name'],
+                )
+
+                state = get_user_state(user.id)
+                await state.set_state(UserState.sign_in_enter_name)
+                await state.update_data(
+                    registration_message_id=pre_registration_message.message_id,
+                    pre_registration_filling_profile=True
+                )
+                continue
+
+            except Exception as e:
+                await manual_registration(user_id, registration, e)
+                continue
+
+        try:
+            fundraiser = await db.get_fundraiser_with_least_registrations()
+
+            try:
+                await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
+                await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
+                await db.increment_registration_count(fundraiser.id)
+                await db.update_registration_status(registration.id, 'waiting_for_payment')
+
+            except Exception as e:
+                await manual_registration(user_id, registration, e)
+                continue
+
+            print(
+                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id} '
+                f'({("@" + registration.username) if registration.username else registration.user_id})\n'
+                f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
+            )
+
+            await db.set_first_warning(registration.id)
+
+        except Exception as e:
+            await manual_registration(user_id, registration, e)
+            continue
+
+        fundraiser = await db.get_fundraiser(registration.fundraiser_id)
+
+        text = LEXICON['pre-registration_mailing'].format(fundraiser.phone_number, fundraiser.preferred_bank,
+                                                          fundraiser.username) if is_user_adult(user.date_of_birth) \
+            else LEXICON['pre-registration_mailing_underage'].format(
+            fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+        )
+
+        try:
+            await bot.send_message(
+                chat_id=user_id, text=text,
+                reply_markup=user_kb.register_to_event(event.id, False, True),
+                disable_web_page_preview=True
+            )
+
+        except Exception as e:
+            await manual_registration(user_id, registration, e)
+            continue
+
+        await asyncio.sleep(0.15)  # задержка чтоб не заблокировали
+
+    await message.answer('Готово')
+
+
+async def manual_registration(user_id: int, registration: Registration, error):
+    await asyncio.sleep(0.1)
+
+    await bot.send_message(
+        chat_id=922787101,
+        text=(
+            f'Необходимо лично связаться с '
+            f'{("@" + registration.username) if registration.username else registration.user_id}\n'
+            f'ID регистрации: <code>{registration.id}</code>'
+            f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
+        )
+    )
+
+    await asyncio.sleep(0.1)
+
+    await bot.send_message(
+        chat_id=user_id,
+        text='<b>К сожалению, не смогли подобрать для вас сборщика из-за высокой нагрузки.\n'
+             'Скоро свяжемся с тобой! 🤗</b>'
+    )
+
+    return print(f'необходимо лично связаться с типом. ошибка: {error}')

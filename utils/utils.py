@@ -1,7 +1,11 @@
 import re
 
-from datetime import datetime
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
+from datetime import datetime, date
 from typing import Optional
+
+from core import config, storage
 
 
 async def validate_and_format_phone_number(phone_number: str) -> dict:
@@ -63,3 +67,20 @@ def validate_date_of_birth(date_of_birth: str) -> dict:
         return {'valid': False, 'reason': 'Введите дату своего рождения в формате ДД.ММ.ГГГГ:'}
 
     return {'valid': True}
+
+
+def is_user_adult(date_of_birth: date) -> bool:
+    """
+    Проверяет, исполнилось ли пользователю 18 лет.
+    :param date_of_birth: Дата рождения пользователя.
+    :return: True, если пользователю есть 18 лет, иначе False.
+    """
+    today = date.today()
+    age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    return age >= 18
+
+
+def get_user_state(user_id: str | int):
+    return FSMContext(
+        storage, StorageKey(bot_id=int(config.tg_bot.token.split(':')[0]), chat_id=user_id, user_id=user_id)
+    )

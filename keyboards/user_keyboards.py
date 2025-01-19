@@ -45,18 +45,19 @@ class UserKeyboards:
         return kb.adjust(1).as_markup()
 
     @staticmethod
-    def register_to_event(event_id: int, show_registration: bool) -> InlineKeyboardMarkup:
+    def register_to_event(event_id: int, show_registration: bool,
+                          show_payment_confirmation: bool = False) -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         if show_registration:
             kb.add(
-                # InlineKeyboardButton(
-                #     text=buttons['event_registration_standard'],
-                #     callback_data=callbacks[buttons['event_registration_standard']].format(event_id)
-                # ),
                 InlineKeyboardButton(
-                    text=buttons['event_registration_pre-registration'],
-                    callback_data=callbacks[buttons['event_registration_pre-registration']].format(event_id)
+                    text='Купить билет',
+                    callback_data=callbacks[buttons['event_registration_standard']].format(event_id)
                 ),
+                # InlineKeyboardButton(
+                #     text=buttons['event_registration_pre-registration'],
+                #     callback_data=callbacks[buttons['event_registration_pre-registration']].format(event_id)
+                # ),
 
                 # InlineKeyboardButton(text=buttons['event_registration_premium'],
                 #                      callback_data=callbacks[buttons['event_registration_premium']].format(event_id)),
@@ -65,8 +66,34 @@ class UserKeyboards:
                 #                      callback_data=callbacks[buttons['event_registration_fast']].format(event_id)),
             ).adjust(1)
 
+        if show_payment_confirmation:
+            kb.add(
+                InlineKeyboardButton(text=buttons['payment_confirmation_button'],
+                                     callback_data=callbacks[buttons['payment_confirmation_button']].format(event_id))
+            )
+
         kb.row(
             InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['upcoming_events']])
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def confirm_payment(event_id: int):
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['payment_confirmation_button'],
+                                 callback_data=callbacks[buttons['payment_confirmation_button']].format(event_id))
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def cancel_payment_confirmation(event_id: int):
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text='❌ Отмена',
+                                 callback_data=callbacks['cancel_payment_confirmation_button'].format(event_id))
         )
 
         return kb.as_markup()
@@ -109,13 +136,13 @@ class UserKeyboards:
                                  callback_data=callbacks[buttons['registration_status_bachelor-cu']]),
             InlineKeyboardButton(text=buttons['registration_status_master-cu'],
                                  callback_data=callbacks[buttons['registration_status_master-cu']]),
-            InlineKeyboardButton(text=buttons['registration_status_t-bank'],
-                                 callback_data=callbacks[buttons['registration_status_t-bank']]),
+            # InlineKeyboardButton(text=buttons['registration_status_t-bank'],
+            #                      callback_data=callbacks[buttons['registration_status_t-bank']]),
             InlineKeyboardButton(text=buttons['registration_status_other'],
                                  callback_data=callbacks[buttons['registration_status_other']]),
             InlineKeyboardButton(text=buttons['back_button'],
                                  callback_data=callbacks['profile_registration_back_to_date_of_birth'])
-        ).adjust(2)
+        ).adjust(2, 1)
 
         return kb.as_markup()
 
@@ -182,6 +209,20 @@ class UserKeyboards:
         kb.row(
             InlineKeyboardButton(text='❌ Отменить регистрацию',
                                  callback_data=callbacks['cancel_registration_on_beer_pong'].format(role))
+        )
+
+        return kb.as_markup()
+
+
+class FundraiserKeyboards:  # TODO: вынести в отдельный файл
+    @staticmethod
+    def confirm_payment(registration_id: int):
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(
+                text='✅ Подтвердить', callback_data=f'fundraiser_payment_confirmation_confirm_{registration_id}'),
+            InlineKeyboardButton(
+                text='❌ Фигню вкинул', callback_data=f'fundraiser_payment_confirmation_cancel_{registration_id}'),
         )
 
         return kb.as_markup()

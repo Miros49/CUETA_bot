@@ -1,7 +1,5 @@
 import pandas as pd
 
-import pandas as pd
-
 from typing import List
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -67,6 +65,16 @@ class DataBase:
                 user.status = status
                 user.phone_number = phone_number
                 await session.commit()
+
+    def is_user_adult(self, date_of_birth: date) -> bool:
+        """
+        Проверяет, исполнилось ли пользователю 18 лет.
+        :param date_of_birth: Дата рождения пользователя.
+        :return: True, если пользователю есть 18 лет, иначе False.
+        """
+        today = date.today()
+        age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+        return age >= 18
 
     # # -------------------------------   ADMIN   -------------------------------
     #
@@ -195,6 +203,19 @@ class DataBase:
 
                 return registration
 
+    async def get_registration_by_id(self, registration_id: int) -> Registration | None:
+        """
+        Возвращает запись о регистрации по ID.
+        :param registration_id: ID регистрации.
+        :return: Объект Registration, если запись найдена, иначе None.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+                return registration
+
     async def remove_registration(self, event_id: int, user_id: int) -> bool:
         """
         Снимает регистрацию пользователя с определённого события.
@@ -225,6 +246,91 @@ class DataBase:
                 registrations = result.scalars().all()
 
                 return [registration for registration in registrations]
+
+    async def update_registration_status(self, registration_id: int, new_status: str):
+        """
+        Изменяет статус указанной регистрации.
+        :param registration_id: ID регистрации.
+        :param new_status: Новый статус для регистрации.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                if registration:
+                    registration.status = new_status
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
+
+    async def assign_fundraiser_to_registration(self, registration_id: int, fundraiser_id: int):
+        """
+        Устанавливает указанный fundraiser_id для конкретной регистрации.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+                if registration:
+                    registration.fundraiser_id = fundraiser_id
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
+
+    async def set_first_warning(self, registration_id: int):
+        """
+        Устанавливает текущее дата и время в поле `first_warning` для указанной регистрации.
+        :param registration_id: ID регистрации.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                if registration:
+                    current_datetime: date = (datetime.utcnow() + timedelta(hours=3)).date()
+                    registration.first_warning = current_datetime
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
+
+    async def get_user_ids_from_registrations(self, event_id: int, registration_type: str) -> list[int]:
+        """
+        Возвращает список user_id всех регистраций с указанным типом для конкретного мероприятия.
+        :param registration_type: Тип регистрации (например, 'pre-registration').
+        :param event_id: ID мероприятия.
+        :return: Список user_id.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration.user_id).where(
+                    (Registration.event_id == event_id) &
+                    (Registration.registration_type == registration_type)
+                )
+                result = await session.execute(query)
+                return [row[0] for row in result.all()]
+
+    async def assign_fundraiser_to_registration(self, registration_id: int, fundraiser_id: int):
+        """
+        Назначает сборщика для указанной регистрации.
+        :param registration_id: ID регистрации, которую нужно обновить.
+        :param fundraiser_id: ID сборщика, которого нужно назначить.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                if registration:
+                    registration.fundraiser_id = fundraiser_id
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
 
     # -------------------------------   BeerPong 25.12.2024   -------------------------------
 
@@ -356,23 +462,94 @@ class DataBase:
                         worksheet.set_column(idx, idx, max_len)
 
                 return file_path
-            
-    async def update_fundraiser_id(self, username: str, new_id: int):
+
+    # -------------------------------   FUNDRAISER   -------------------------------
+
+    async def get_fundraiser(self, fundraiser_id: int) -> FundRaiser | None:
         """
-        Изменяет ID сборщика с указанным username.
-        :param username: Имя пользователя сборщика.
-        :param new_id: Новый ID, который нужно установить.
+        Ищет сборщика по id.
+        :param fundraiser_id: id сборщика.
+        :return: Объект FundRaiser, если найден, иначе None.
         """
         async with self.async_session() as session:
             async with session.begin():
-                # Поиск сборщика по username
-                query = select(FundRaiser).where(FundRaiser.username == username)
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
+                result = await session.execute(query)
+                return result.scalars().first()
+
+    async def get_all_fundraisers(self) -> list[FundRaiser]:
+        """
+        Возвращает список всех сборщиков.
+        :return: Список объектов FundRaiser.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser)
+                result = await session.execute(query)
+                return result.scalars().all()
+
+    async def get_fundraiser_with_least_registrations(self) -> FundRaiser | None:
+        """
+        Возвращает сборщика с наименьшим числом number_of_registrations,
+        учитывая только тех, у кого статус True (свободен).
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    select(FundRaiser)
+                    .where((FundRaiser.status == True) & (FundRaiser.id != 0))
+                    .order_by(FundRaiser.number_of_registrations)
+                )
+                result = await session.execute(query)
+                return result.scalars().first()
+
+    async def increment_registration_count(self, fundraiser_id: int):
+        """Добавляет в поле number_of_registrations одну регистрацию."""
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
                 result = await session.execute(query)
                 fundraiser = result.scalars().first()
-
                 if fundraiser:
-                    # Обновление ID сборщика
-                    fundraiser.id = new_id
+                    fundraiser.number_of_registrations += 1
                     await session.commit()
                 else:
-                    raise ValueError(f"Сборщик с username '{username}' не найден.")
+                    raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
+
+    async def decrement_registration_and_increment_verification(self, fundraiser_id: int):
+        """
+        Удаляет одну регистрацию из number_of_registrations и добавляет одну в waiting_for_verification.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
+                result = await session.execute(query)
+                fundraiser = result.scalars().first()
+                if fundraiser:
+                    if fundraiser.number_of_registrations > 0:
+                        fundraiser.number_of_registrations -= 1
+                        fundraiser.waiting_for_verification += 1
+                        await session.commit()
+                    else:
+                        raise ValueError("Нет доступных регистраций для удаления.")
+                else:
+                    raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
+
+    async def move_verification_to_verified(self, fundraiser_id: int):
+        """
+        Удаляет одну запись из waiting_for_verification и добавляет одну в verified.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(FundRaiser).where(FundRaiser.id == fundraiser_id)
+                result = await session.execute(query)
+                fundraiser = result.scalars().first()
+                if fundraiser:
+                    if fundraiser.waiting_for_verification > 0:
+                        fundraiser.waiting_for_verification -= 1
+                        fundraiser.verified += 1
+                        await session.commit()
+                    else:
+                        raise ValueError("Нет записей в ожидании подтверждения для перемещения.")
+                else:
+                    raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
