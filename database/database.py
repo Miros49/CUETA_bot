@@ -292,8 +292,42 @@ class DataBase:
                 registration = result.scalars().first()
 
                 if registration:
-                    current_datetime = (datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")
+                    current_datetime: date = (datetime.utcnow() + timedelta(hours=3)).date()
                     registration.first_warning = current_datetime
+                    await session.commit()
+                else:
+                    raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
+
+    async def get_user_ids_from_registrations(self, event_id: int, registration_type: str) -> list[int]:
+        """
+        Возвращает список user_id всех регистраций с указанным типом для конкретного мероприятия.
+        :param registration_type: Тип регистрации (например, 'pre-registration').
+        :param event_id: ID мероприятия.
+        :return: Список user_id.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration.user_id).where(
+                    (Registration.event_id == event_id) &
+                    (Registration.registration_type == registration_type)
+                )
+                result = await session.execute(query)
+                return [row[0] for row in result.all()]
+
+    async def assign_fundraiser_to_registration(self, registration_id: int, fundraiser_id: int):
+        """
+        Назначает сборщика для указанной регистрации.
+        :param registration_id: ID регистрации, которую нужно обновить.
+        :param fundraiser_id: ID сборщика, которого нужно назначить.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration).where(Registration.id == registration_id)
+                result = await session.execute(query)
+                registration = result.scalars().first()
+
+                if registration:
+                    registration.fundraiser_id = fundraiser_id
                     await session.commit()
                 else:
                     raise ValueError(f"Регистрация с ID {registration_id} не найдена.")

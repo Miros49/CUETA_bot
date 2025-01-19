@@ -49,14 +49,14 @@ class UserKeyboards:
         kb = InlineKeyboardBuilder()
         if show_registration:
             kb.add(
-                # InlineKeyboardButton(
-                #     text=buttons['event_registration_standard'],
-                #     callback_data=callbacks[buttons['event_registration_standard']].format(event_id)
-                # ),
                 InlineKeyboardButton(
-                    text=buttons['event_registration_pre-registration'],
-                    callback_data=callbacks[buttons['event_registration_pre-registration']].format(event_id)
+                    text=buttons['event_registration_standard'],
+                    callback_data=callbacks[buttons['event_registration_standard']].format(event_id)
                 ),
+                # InlineKeyboardButton(
+                #     text=buttons['event_registration_pre-registration'],
+                #     callback_data=callbacks[buttons['event_registration_pre-registration']].format(event_id)
+                # ),
 
                 # InlineKeyboardButton(text=buttons['event_registration_premium'],
                 #                      callback_data=callbacks[buttons['event_registration_premium']].format(event_id)),
@@ -129,8 +129,8 @@ class UserKeyboards:
                                  callback_data=callbacks[buttons['registration_status_bachelor-cu']]),
             InlineKeyboardButton(text=buttons['registration_status_master-cu'],
                                  callback_data=callbacks[buttons['registration_status_master-cu']]),
-            InlineKeyboardButton(text=buttons['registration_status_t-bank'],
-                                 callback_data=callbacks[buttons['registration_status_t-bank']]),
+            # InlineKeyboardButton(text=buttons['registration_status_t-bank'],
+            #                      callback_data=callbacks[buttons['registration_status_t-bank']]),
             InlineKeyboardButton(text=buttons['registration_status_other'],
                                  callback_data=callbacks[buttons['registration_status_other']]),
             InlineKeyboardButton(text=buttons['back_button'],

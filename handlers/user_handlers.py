@@ -169,7 +169,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     event = await db.get_event(event_id)
     registration = await db.get_registration(event.id, callback.from_user.id)
 
-    if not (user.name and user.date_of_birth):
+    if not user.name and user.date_of_birth:
         await callback.message.delete()
         message = await callback.message.answer(
             text=LEXICON['you_need_to_sign_in'],
@@ -186,14 +186,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
         )
         return await callback.answer('✅ Вы уже зарегистрированы на данное мероприятие', show_alert=True)
 
-    try:
-        await db.create_registration(event.id, user.id, user.username, 0, registration_type, 0, 'processing')
-    except Exception as e:
-        print(f"\nОшибка при попытке регистрации пользователя {user.id}\n{e}\n")
-        await callback.message.delete()
-        return await callback.message.answer(LEXICON['error_occurred'])
-
-    if 1:
+    if 0:
         additional_text = LEXICON['pre-registration_to_event_confirmed']
         send_instructions = False
     else:
@@ -210,14 +203,28 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     if send_instructions:
         try:
             fundraiser = await db.get_fundraiser_with_least_registrations()
+
+            try:
+                await db.create_registration(
+                    event.id, user.id, user.username, 0,
+                    registration_type, fundraiser.id, 'processing'
+                )
+            except Exception as e:
+                print(f"\nОшибка при попытке регистрации пользователя {user.id}\n{e}\n")
+                await callback.message.delete()
+                return await callback.message.answer(LEXICON['error_occurred'])
+
+            registration = await db.get_registration(event.id, callback.from_user.id)
             await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
             await db.increment_registration_count(fundraiser.id)
             await db.update_registration_status(registration.id, 'waiting_for_payment')
+
             print(
                 f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id}'
                 f'({("@" + registration.username) if registration.username else registration.user_id})\n'
                 f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
             )
+
             await db.set_first_warning(registration.id)
             await callback.message.answer(
                 text=LEXICON['payment_instructions'],
@@ -262,11 +269,12 @@ async def send_payment_confirmation(callback: CallbackQuery, state: FSMContext):
 async def send_payment_confirmation_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     event_id, registration_id = data['event_id'], data['registration_id']
-    registration = await db.get_registration(registration_id)
+    registration = await db.get_registration_by_id(registration_id)
 
     try:
         await bot.edit_message_reply_markup(
-            chat_id=message.chat.id, message_id=data['last_payment_confirmation_message_message_id']
+            chat_id=message.chat.id, message_id=data['last_payment_confirmation_message_message_id'],
+            reply_markup=None
         )
     except Exception as e:
         print(f'фигня с удалением клавиатурыы отмены поддтверждения: {e}')
@@ -285,18 +293,20 @@ async def send_payment_confirmation_handler(message: Message, state: FSMContext)
     if message.photo:
         await bot.send_photo(
             chat_id=registration.fundraiser_id, photo=message.photo[-1].file_id,
-            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}',
+            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}</b>',
             reply_markup=fundraiser_kb.confirm_payment(registration_id)
         )
     else:
         await bot.send_document(
             chat_id=registration.fundraiser_id, document=message.document.file_id,
-            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}',
+            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}</b>',
             reply_markup=fundraiser_kb.confirm_payment(registration_id)
         )
 
-    await message.answer('<b>Круто! 🔥\nОсталось только дождаться подтверждения оплаты. Скоро свяжемся с тобой 😉')
+    await message.answer('<b>Круто! 🔥\nОсталось только дождаться подтверждения оплаты. Скоро свяжемся с тобой 😉</b>')
     await db.update_registration_status(registration_id, 'waiting_for_fundraiser_confirmation')
+
+    await state.set_state(UserState.default_state)
 
 
 @router.message(StateFilter(UserState.sign_in_enter_name))
@@ -483,9 +493,21 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
 
     await callback.message.edit_text('✅ Информация о вашем аккаунте сохранена!')
 
-    if data['show_profile']:
+    if data.get('pre_registration_filling_profile', None):
+        await callback.message.edit_text(
+            text=LEXICON['pre-registration_profile_filled']
+        )
+
+        data.pop('pre_registration_filling_profile', None)
+        await state.update_data(**data)
+
+    elif data.get('show_profile', None):
         await profile_callback_handler(callback, state)
-    elif data['registration_to_event']:
+
+        data.pop('show_profile', None)
+        await state.update_data(**data)
+
+    elif data.get('registration_to_event', None):
         event = await db.get_event(data['registration_to_event'])
         await callback.message.answer_photo(
             photo=event.photo_id,

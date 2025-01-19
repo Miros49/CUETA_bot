@@ -44,6 +44,10 @@ LEXICON: dict[str, str | list[str]] = {
                             '🔹 Статус: {}\n'
                             '📱 Номер телефона: <code>{}</code></b>',
     'pre-registration_to_event_confirmed': '\n\n✅ Оформлена предрегистрация на мероприятие.\nСкоро свяжемся с тобой 😎',
+    'pre-registration_mailing': '',
+    'pre-registration_mailing_underage': '',
+    'pre-registration_mailing_no_profile': '',
+    'pre-registration_profile_filled': '',
     'see_payment_instructions_below': 'Для подтверждения регистрации необходимо осуществить оплату 👇',
     'payment_instructions': 'инструкция',
     # '': '<b>‼️ Для подтверждения регистрации на <i>{}</i>,'
