@@ -320,9 +320,11 @@ async def send_registrations_list(message: Message):
 
 @router.message(F.text == 'предрега')
 async def send_registrations_list(message: Message):
-    event = await db.get_event(event_id=2)
+    event = await db.get_event(event_id=8)
     registration_type = 'pre-registration'
     user_ids = await db.get_user_ids_from_registrations(event_id=event.id, registration_type=registration_type)
+
+    print(user_ids)
 
     for user_id in user_ids:
         user = await db.get_user(user_id)
@@ -330,17 +332,28 @@ async def send_registrations_list(message: Message):
 
         if not (user.name and user.date_of_birth):
             try:
-                pre_registration_message = await bot.send_message(
-                    chat_id=user_id, text=LEXICON['pre-registration_mailing_no_profile']
+                await bot.send_message(
+                    chat_id=user_id,
+                    text=LEXICON['pre-registration_mailing_no_profile'],
+                    disable_web_page_preview=True
                 )
 
-                state = get_user_state(user_id)
-                await state.set_state(UserState.sign_in_enter_name)
-                return await state.update_data(
-                    registration_message_id=pre_registration_message.message_id, pre_registration_filling_profile=True
+                pre_registration_message = await bot.send_message(
+                    chat_id=user_id,
+                    text=LEXICON['enter_your_name'],
                 )
+
+                state = get_user_state(user.id)
+                await state.set_state(UserState.sign_in_enter_name)
+                await state.update_data(
+                    registration_message_id=pre_registration_message.message_id,
+                    pre_registration_filling_profile=True
+                )
+                continue
+
             except Exception as e:
-                return print(f'ошибка при попытке заставить дауна заполнить профиль: {e}')
+                await manual_registration(user_id, registration, e)
+                continue
 
         try:
             fundraiser = await db.get_fundraiser_with_least_registrations()
@@ -352,37 +365,48 @@ async def send_registrations_list(message: Message):
                 await db.update_registration_status(registration.id, 'waiting_for_payment')
 
             except Exception as e:
-                return await manual_registration(user_id, registration, e)
+                await manual_registration(user_id, registration, e)
+                continue
 
             print(
-                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id}'
+                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id} '
                 f'({("@" + registration.username) if registration.username else registration.user_id})\n'
                 f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
             )
 
             await db.set_first_warning(registration.id)
 
+        except Exception as e:
+            await manual_registration(user_id, registration, e)
+            continue
+
+        fundraiser = await db.get_fundraiser(registration.fundraiser_id)
+
+        text = LEXICON['pre-registration_mailing'].format(fundraiser.phone_number, fundraiser.preferred_bank,
+                                                          fundraiser.username) if is_user_adult(user.date_of_birth) \
+            else LEXICON['pre-registration_mailing_underage'].format(
+            fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+        )
+
+        try:
             await bot.send_message(
-                chat_id=user_id,
-                text=LEXICON['payment_instructions'],
-                reply_markup=user_kb.confirm_payment(event.id)
+                chat_id=user_id, text=text,
+                reply_markup=user_kb.register_to_event(event.id, False, True),
+                disable_web_page_preview=True
             )
 
         except Exception as e:
-            return await manual_registration(user_id, registration, e)
+            await manual_registration(user_id, registration, e)
+            continue
 
-        if is_user_adult(user.date_of_birth):
-            await bot.send_message(
-                chat_id=user_id, text=LEXICON['pre-registration_mailing']
-            )
+        await asyncio.sleep(0.15)  # задержка чтоб не заблокировали
 
-        else:
-            await bot.send_message(
-                chat_id=user_id, text=LEXICON['pre-registration_mailing_underage']
-            )
+    await message.answer('Готово')
 
 
 async def manual_registration(user_id: int, registration: Registration, error):
+    await asyncio.sleep(0.1)
+
     await bot.send_message(
         chat_id=922787101,
         text=(
@@ -392,6 +416,8 @@ async def manual_registration(user_id: int, registration: Registration, error):
             f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
         )
     )
+
+    await asyncio.sleep(0.1)
 
     await bot.send_message(
         chat_id=user_id,

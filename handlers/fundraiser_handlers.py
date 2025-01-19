@@ -17,9 +17,9 @@ router.callback_query.filter(IsFundraiser())
 
 
 @router.callback_query(F.data.startswith('fundraiser_payment_confirmation'))
-async def admin_manu_handler(callback: CallbackQuery, state: FSMContext):
+async def admin_manu_handler(callback: CallbackQuery):
     registration_id = int(callback.data.split('_')[-1])
-    registration = await db.get_registration(registration_id)
+    registration = await db.get_registration_by_id(registration_id)
 
     await callback.message.edit_reply_markup(reply_markup=None)
 
@@ -35,14 +35,15 @@ async def admin_manu_handler(callback: CallbackQuery, state: FSMContext):
 
         await bot.send_message(
             chat_id=registration.user_id,
-            text='✅ Регистрация на мероприятие подтверждена!'
+            text='✅ Оплата регистрации на мероприятие подтверждена!'
         )
 
     else:
+        await db.update_registration_status(registration_id, 'personal')
         await callback.message.edit_caption(
             caption=(
                 f'Пожалуйста, свяжись с этим болваном лично. У меня не было времени это автоматизировать, сори\n'
-                f'{("@" + registration.username) if registration.username else registration.user_id} сохранена\n'
+                f'{("@" + registration.username) if registration.username else registration.user_id}\n'
             )
         )
         await bot.send_message(

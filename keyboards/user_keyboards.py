@@ -45,12 +45,13 @@ class UserKeyboards:
         return kb.adjust(1).as_markup()
 
     @staticmethod
-    def register_to_event(event_id: int, show_registration: bool) -> InlineKeyboardMarkup:
+    def register_to_event(event_id: int, show_registration: bool,
+                          show_payment_confirmation: bool = False) -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         if show_registration:
             kb.add(
                 InlineKeyboardButton(
-                    text=buttons['event_registration_standard'],
+                    text='Купить билет',
                     callback_data=callbacks[buttons['event_registration_standard']].format(event_id)
                 ),
                 # InlineKeyboardButton(
@@ -64,6 +65,12 @@ class UserKeyboards:
                 # InlineKeyboardButton(text=buttons['event_registration_fast'],
                 #                      callback_data=callbacks[buttons['event_registration_fast']].format(event_id)),
             ).adjust(1)
+
+        if show_payment_confirmation:
+            kb.add(
+                InlineKeyboardButton(text=buttons['payment_confirmation_button'],
+                                     callback_data=callbacks[buttons['payment_confirmation_button']].format(event_id))
+            )
 
         kb.row(
             InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['upcoming_events']])
@@ -85,7 +92,7 @@ class UserKeyboards:
     def cancel_payment_confirmation(event_id: int):
         kb = InlineKeyboardBuilder()
         kb.add(
-            InlineKeyboardButton(text='',
+            InlineKeyboardButton(text='❌ Отмена',
                                  callback_data=callbacks['cancel_payment_confirmation_button'].format(event_id))
         )
 
@@ -135,7 +142,7 @@ class UserKeyboards:
                                  callback_data=callbacks[buttons['registration_status_other']]),
             InlineKeyboardButton(text=buttons['back_button'],
                                  callback_data=callbacks['profile_registration_back_to_date_of_birth'])
-        ).adjust(2)
+        ).adjust(2, 1)
 
         return kb.as_markup()
 

@@ -495,7 +495,11 @@ class DataBase:
         """
         async with self.async_session() as session:
             async with session.begin():
-                query = select(FundRaiser).where(FundRaiser.status == True).order_by(FundRaiser.number_of_registrations)
+                query = (
+                    select(FundRaiser)
+                    .where((FundRaiser.status == True) & (FundRaiser.id != 0))
+                    .order_by(FundRaiser.number_of_registrations)
+                )
                 result = await session.execute(query)
                 return result.scalars().first()
 
