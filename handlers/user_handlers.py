@@ -165,7 +165,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     event_id = int(callback.data.split('_')[-1])
     event = await db.get_event(event_id)
 
-    if not user.name and user.date_of_birth:
+    if not (user.name and user.date_of_birth):
         await callback.message.delete()
         message = await callback.message.answer(
             text=LEXICON['you_need_to_sign_in'],

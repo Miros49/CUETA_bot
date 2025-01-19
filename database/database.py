@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import date, datetime, timedelta
 
-from . import User, Event, Registration, BeerPongTeam
+from . import User, Event, Registration, BeerPongTeam, FundRaiser
 
 Base = declarative_base()
 
@@ -356,3 +356,23 @@ class DataBase:
                         worksheet.set_column(idx, idx, max_len)
 
                 return file_path
+            
+    async def update_fundraiser_id(self, username: str, new_id: int):
+        """
+        Изменяет ID сборщика с указанным username.
+        :param username: Имя пользователя сборщика.
+        :param new_id: Новый ID, который нужно установить.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                # Поиск сборщика по username
+                query = select(FundRaiser).where(FundRaiser.username == username)
+                result = await session.execute(query)
+                fundraiser = result.scalars().first()
+
+                if fundraiser:
+                    # Обновление ID сборщика
+                    fundraiser.id = new_id
+                    await session.commit()
+                else:
+                    raise ValueError(f"Сборщик с username '{username}' не найден.")
