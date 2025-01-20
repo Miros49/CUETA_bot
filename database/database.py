@@ -1,7 +1,7 @@
 import pandas as pd
 
 from typing import List
-from sqlalchemy import select, func
+from sqlalchemy import select, func, case
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import date, datetime, timedelta
@@ -21,7 +21,7 @@ class DataBase:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    # -------------------------------   USER   -------------------------------
+    # -----------------------------   USER   ----------------------------- #
 
     async def init_user(self, user_id: int, username: str | None):
         async with self.async_session() as session:
@@ -76,7 +76,7 @@ class DataBase:
         age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
         return age >= 18
 
-    # # -------------------------------   ADMIN   -------------------------------
+    # # -----------------------------   ADMIN   ----------------------------- #
     #
     # async def get_admins_ids(self):
     #     async with self.async_session() as session:
@@ -120,7 +120,7 @@ class DataBase:
     #                 await session.commit()
     #                 return True
 
-    # -------------------------------   EVENT   -------------------------------
+    # -----------------------------   EVENT   ----------------------------- #
 
     async def create_event(self, name: str, description: str, event_date: date, photo_id: str | None):
         all_events = await self.get_upcoming_events()
@@ -172,7 +172,7 @@ class DataBase:
                     for event in events
                 ]
 
-    # -------------------------------    Registration   -------------------------------
+    # -----------------------------    Registration   ----------------------------- #
 
     async def create_registration(self, event_id: int, user_id: int, username: str | None, registration_wave: int,
                                   registration_type: str, fundraiser_id: int, status: str) -> int:
@@ -332,7 +332,7 @@ class DataBase:
                 else:
                     raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
 
-    # -------------------------------   BeerPong 25.12.2024   -------------------------------
+    # -----------------------------   BeerPong 25.12.2024   ----------------------------- #
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
                           player_2_username: str) -> int:
@@ -463,7 +463,7 @@ class DataBase:
 
                 return file_path
 
-    # -------------------------------   FUNDRAISER   -------------------------------
+    # -----------------------------   FUNDRAISER   ----------------------------- #
 
     async def get_fundraiser(self, fundraiser_id: int) -> FundRaiser | None:
         """
@@ -553,3 +553,74 @@ class DataBase:
                         raise ValueError("Нет записей в ожидании подтверждения для перемещения.")
                 else:
                     raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
+
+    # -----------------------------   FUNDRAISER   ----------------------------- #
+
+    async def get_registration_statistics(self) -> dict:
+        """
+        Считает статистику по регистрациям:
+        1. Общая статистика (всего, подтверждённые, ожидают подтверждения, ожидают оплаты, готовы оплатить, остальные).
+        2. Статистика по каждому сборщику, включая собранные деньги (число подтверждённых * 2000₽).
+        :return: Словарь с общей статистикой и статистикой по каждому сборщику.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                # Общая статистика
+                query_all = select(Registration.status, func.count()).group_by(Registration.status)
+                result_all = await session.execute(query_all)
+                stats_all = {row[0]: row[1] for row in result_all}
+
+                # Общая статистика с разделением
+                total = sum(stats_all.values())
+                confirmed = stats_all.get('confirmed', 0)
+                waiting_for_confirmation = stats_all.get('waiting_for_fundraiser_confirmation', 0)
+                waiting_for_payment = stats_all.get('waiting_for_payment', 0)
+                ready_to_pay = stats_all.get('ready_to_confirm_payment', 0)
+                processing = stats_all.get('processing', 0)
+
+                overall_stats = {
+                    "total": total,
+                    "confirmed": confirmed,
+                    "waiting_for_confirmation": waiting_for_confirmation,
+                    "waiting_for_payment": waiting_for_payment,
+                    "ready_to_pay": ready_to_pay,
+                    "processing": processing,
+                }
+
+                # Статистика по сборщикам
+                query_fundraiser = (
+                    select(
+                        FundRaiser.id,
+                        FundRaiser.username,
+                        func.count(Registration.id).label("total"),
+                        func.sum(case((Registration.status == 'confirmed', 1), else_=0)).label("confirmed"),
+                        func.sum(
+                            case((Registration.status == 'waiting_for_fundraiser_confirmation', 1), else_=0)).label(
+                            "waiting_for_confirmation"),
+                        func.sum(case((Registration.status == 'waiting_for_payment', 1), else_=0)).label(
+                            "waiting_for_payment"),
+                        func.sum(case((Registration.status == 'ready_to_confirm_payment', 1), else_=0)).label(
+                            "ready_to_pay"),
+                    )
+                    .join(Registration, Registration.fundraiser_id == FundRaiser.id)
+                    .group_by(FundRaiser.id, FundRaiser.username)
+                )
+                result_fundraiser = await session.execute(query_fundraiser)
+                fundraiser_stats = []
+
+                for row in result_fundraiser:
+                    fundraiser_stats.append({
+                        "fundraiser_id": row.id,
+                        "fundraiser_username": row.username,
+                        "collected_money": row.confirmed * 2000,  # Расчет денег
+                        "total": row.total,
+                        "confirmed": row.confirmed,
+                        "waiting_for_confirmation": row.waiting_for_confirmation,
+                        "waiting_for_payment": row.waiting_for_payment,
+                        "ready_to_pay": row.ready_to_pay,
+                    })
+
+                return {
+                    "overall_statistics": overall_stats,
+                    "fundraisers_statistics": fundraiser_stats,
+                }

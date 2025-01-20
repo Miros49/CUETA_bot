@@ -26,8 +26,47 @@ router.callback_query.filter(IsAdmin())
 
 @router.message(Command('admin'))
 async def admin_manu_handler(message: Message, state: FSMContext):
-    await message.answer(LEXICON['admin_menu'].format(message.from_user.first_name), reply_markup=kb.menu())
+    menu_message = LEXICON['admin_menu'].format(message.from_user.first_name)
 
+    # Получаем статистику
+    statistics = await db.get_registration_statistics()
+
+    # Формируем сообщение для общей статистики
+    overall_statistics_message = LEXICON['admin_overall_statistics'].format(
+        total=statistics["overall_statistics"]["total"],
+        confirmed=statistics["overall_statistics"]["confirmed"],
+        waiting_for_confirmation=statistics["overall_statistics"]["waiting_for_confirmation"],
+        waiting_for_payment=statistics["overall_statistics"]["waiting_for_payment"],
+        ready_to_pay=statistics["overall_statistics"]["ready_to_pay"],
+        processing=statistics["overall_statistics"]["processing"],
+    )
+
+    # Формируем сообщения для каждого сборщика
+    fundraisers_statistics_messages = [
+        LEXICON['admin_fundraiser_statistics'].format(
+            fundraiser_username=fundraiser["fundraiser_username"],
+            collected_money=fundraiser["collected_money"],
+            total=fundraiser["total"],
+            confirmed=fundraiser["confirmed"],
+            waiting_for_confirmation=fundraiser["waiting_for_confirmation"],
+            waiting_for_payment=fundraiser["waiting_for_payment"],
+            ready_to_pay=fundraiser["ready_to_pay"],
+        )
+        for fundraiser in statistics["fundraisers_statistics"]
+    ]
+
+    # Объединяем сообщения
+    full_message = (
+        f"{menu_message}\n\n"
+        f"{overall_statistics_message}\n\n"
+        f"<b>📊 Статистика по сборщикам:</b>\n\n"
+        f"{''.join(fundraisers_statistics_messages)}"
+    )
+
+    # Отправляем сообщение с клавиатурой
+    await message.answer(full_message, reply_markup=kb.menu())
+
+    # Устанавливаем состояние
     await state.set_state(AdminState.default_state)
 
 
@@ -423,7 +462,7 @@ async def manual_registration(user_id: int, registration: Registration, error):
         await bot.send_message(
             chat_id=user_id,
             text='<b>К сожалению, не смогли подобрать для вас сборщика из-за высокой нагрузки.\n'
-                'Скоро свяжемся с тобой! 🤗</b>'
+                 'Скоро свяжемся с тобой! 🤗</b>'
         )
     except Exception as e:
         print(e)
