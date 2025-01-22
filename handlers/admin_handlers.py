@@ -468,3 +468,38 @@ async def manual_registration(user_id: int, registration: Registration, error):
         print(e)
 
     return print(f'необходимо лично связаться с типом. ошибка: {error}')
+
+
+@router.message(F.text == 'рассылка даунам')
+async def test_handler(message: Message):
+    users_ids = await db.get_users_with_specific_status_and_warning()
+    counter = 0
+
+    print(len(users_ids), '\n', users_ids)
+
+    for user_id in users_ids:
+        user = await db.get_user(user_id)
+        registration = await db.get_registration(2, user_id)
+        fundraiser = await db.get_fundraiser(registration.fundraiser_id)
+
+        if is_user_adult(user.date_of_birth):
+            text = LEXICON['temp_mailing_mexican_party'].format(
+                fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+            )
+        else:
+            text = LEXICON['temp_mailing_mexican_party_underage'].format(
+                fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+            )
+
+        # try:
+        #     await bot.send_message(
+        #         chat_id=user_id, text=text
+        #     )
+        #     counter += 1
+        #
+        # except Exception as e:
+        #     print(e)
+        #
+        # await asyncio.sleep(0.1)
+
+    await message.answer(f'Готово!\n{counter} из {len(users_ids)}')
