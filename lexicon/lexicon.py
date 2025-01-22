@@ -200,7 +200,7 @@ LEXICON: dict[str, str | list[str]] = {
                                    "✅ <i><b>Подтверждённых:</b> <code>{confirmed}</code></i>\n"
                                    "⏳ <b>Ожидает подтверждения:</b> <code>{waiting_for_confirmation}</code>\n"
                                    "💸 <b>Производит оплату:</b> <code>{waiting_for_payment}</code>\n"
-                                   "☑️ <b>Готовы оплатить:</b> <code>{ready_to_pay}</code>",
+                                   "☑️ <b>Готовы оплатить:</b> <code>{ready_to_pay}</code>\n\n",
 }
 
 buttons: dict[str, str] = {

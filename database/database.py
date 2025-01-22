@@ -594,15 +594,13 @@ class DataBase:
                         FundRaiser.username,
                         func.count(Registration.id).label("total"),
                         func.sum(case((Registration.status == 'confirmed', 1), else_=0)).label("confirmed"),
-                        func.sum(
-                            case((Registration.status == 'waiting_for_fundraiser_confirmation', 1), else_=0)).label(
-                            "waiting_for_confirmation"),
-                        func.sum(case((Registration.status == 'waiting_for_payment', 1), else_=0)).label(
-                            "waiting_for_payment"),
-                        func.sum(case((Registration.status == 'ready_to_confirm_payment', 1), else_=0)).label(
-                            "ready_to_pay"),
+                        func.sum(case((Registration.status == 'waiting_for_fundraiser_confirmation', 1), else_=0))
+                        .label("waiting_for_confirmation"),
+                        func.sum(case((Registration.status == 'waiting_for_payment', 1), else_=0)).label("waiting_for_payment"),
+                        func.sum(case((Registration.status == 'ready_to_confirm_payment', 1), else_=0)).label("ready_to_pay"),
                     )
                     .join(Registration, Registration.fundraiser_id == FundRaiser.id)
+                    .where(FundRaiser.id != 0)  # Исключение нулевого сборщика
                     .group_by(FundRaiser.id, FundRaiser.username)
                 )
                 result_fundraiser = await session.execute(query_fundraiser)
