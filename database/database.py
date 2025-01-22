@@ -1,7 +1,7 @@
 import pandas as pd
 
 from typing import List
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func, case, not_
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import date, datetime, timedelta
@@ -332,6 +332,27 @@ class DataBase:
                 else:
                     raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
 
+    async def get_users_with_specific_status_and_warning(self) -> list[int]:
+        """
+        Возвращает список user_id, статус регистрации которых не входит в
+        ['confirmed', 'waiting_for_fundraiser_confirmation'], а first_warning равен 2025-01-19.
+        :return: Список user_id.
+        """
+        target_date = date(2025, 1, 19)  # Целевая дата для поля first_warning
+
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    select(Registration.user_id)
+                    .where(
+                        not_(Registration.status.in_(['confirmed', 'waiting_for_fundraiser_confirmation'])),
+                        Registration.first_warning == target_date
+                    )
+                )
+                result = await session.execute(query)
+
+                return [row[0] for row in result.all()]
+
     # -----------------------------   BeerPong 25.12.2024   ----------------------------- #
 
     async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
@@ -554,8 +575,6 @@ class DataBase:
                 else:
                     raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
 
-    # -----------------------------   FUNDRAISER   ----------------------------- #
-
     async def get_registration_statistics(self) -> dict:
         """
         Считает статистику по регистрациям:
@@ -594,15 +613,15 @@ class DataBase:
                         FundRaiser.username,
                         func.count(Registration.id).label("total"),
                         func.sum(case((Registration.status == 'confirmed', 1), else_=0)).label("confirmed"),
-                        func.sum(
-                            case((Registration.status == 'waiting_for_fundraiser_confirmation', 1), else_=0)).label(
-                            "waiting_for_confirmation"),
+                        func.sum(case((Registration.status == 'waiting_for_fundraiser_confirmation', 1), else_=0))
+                        .label("waiting_for_confirmation"),
                         func.sum(case((Registration.status == 'waiting_for_payment', 1), else_=0)).label(
                             "waiting_for_payment"),
                         func.sum(case((Registration.status == 'ready_to_confirm_payment', 1), else_=0)).label(
                             "ready_to_pay"),
                     )
                     .join(Registration, Registration.fundraiser_id == FundRaiser.id)
+                    .where(FundRaiser.id != 0)  # Исключение нулевого сборщика
                     .group_by(FundRaiser.id, FundRaiser.username)
                 )
                 result_fundraiser = await session.execute(query_fundraiser)
