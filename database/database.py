@@ -1,7 +1,7 @@
 import pandas as pd
 
 from typing import List
-from sqlalchemy import select, func, case, not_
+from sqlalchemy import select, func, case, not_, cast, Date
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import date, datetime, timedelta
@@ -334,11 +334,11 @@ class DataBase:
 
     async def get_users_with_specific_status_and_warning(self) -> list[int]:
         """
-        Возвращает список user_id, статус регистрации которых не входит в
+        Возвращает список user_id, статус регистрации которых не входит в 
         ['confirmed', 'waiting_for_fundraiser_confirmation'], а first_warning равен 2025-01-19.
         :return: Список user_id.
         """
-        target_date = date(2025, 1, 19)  # Целевая дата для поля first_warning
+        target_date = date(2025, 1, 19)  # Целевая дата
 
         async with self.async_session() as session:
             async with session.begin():
@@ -346,11 +346,10 @@ class DataBase:
                     select(Registration.user_id)
                     .where(
                         not_(Registration.status.in_(['confirmed', 'waiting_for_fundraiser_confirmation'])),
-                        Registration.first_warning == target_date
+                        cast(Registration.first_warning, Date) == target_date  # Преобразование first_warning в Date
                     )
                 )
                 result = await session.execute(query)
-
                 return [row[0] for row in result.all()]
 
     # -----------------------------   BeerPong 25.12.2024   ----------------------------- #
