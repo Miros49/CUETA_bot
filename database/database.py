@@ -1,7 +1,7 @@
 import pandas as pd
 
 from typing import List
-from sqlalchemy import select, func, case, not_
+from sqlalchemy import select, func, case, not_, cast
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import date, datetime, timedelta
