@@ -282,7 +282,7 @@ async def send_payment_confirmation_handler(message: Message, state: FSMContext)
     data = await state.get_data()
     event_id, registration_id = data['event_id'], data['registration_id']
     registration = await db.get_registration_by_id(registration_id)
-    event = await db.get_event(int(event_id))
+    user = await db.get_user(message.from_user.id)
 
     if not registration.fundraiser_id:
         print("для мироса (всё норм, это не ошибка)")
@@ -315,16 +315,23 @@ async def send_payment_confirmation_handler(message: Message, state: FSMContext)
             last_payment_confirmation_message_message_id=last_payment_confirmation_message_message_id
         )
 
+    underage_text = '' if not is_user_adult(user.date_of_birth) \
+        else '\n‼️ Необходимо проверить согласие от родителей'
+    caption = (
+        f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}'
+        f'{underage_text}</b>'
+    )
+
     if message.photo:
         await bot.send_photo(
             chat_id=registration.fundraiser_id, photo=message.photo[-1].file_id,
-            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}</b>',
+            caption=caption,
             reply_markup=fundraiser_kb.confirm_payment(registration_id)
         )
     else:
         await bot.send_document(
             chat_id=registration.fundraiser_id, document=message.document.file_id,
-            caption=f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}</b>',
+            caption=caption,
             reply_markup=fundraiser_kb.confirm_payment(registration_id)
         )
 
