@@ -491,15 +491,17 @@ async def test_handler(message: Message):
                 fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
             )
 
-        # try:
-        #     await bot.send_message(
-        #         chat_id=user_id, text=text
-        #     )
-        #     counter += 1
-        #
-        # except Exception as e:
-        #     print(e)
-        #
-        # await asyncio.sleep(0.1)
+        try:
+            await bot.send_message(
+                chat_id=user_id, text=text,
+                reply_markup=user_kb.register_to_event(2, False, True),
+                disable_web_page_preview=True
+            )
+            counter += 1
+        
+        except Exception as e:
+            print(e)
+        
+        await asyncio.sleep(0.1)
 
     await message.answer(f'Готово!\n{counter} из {len(users_ids)}')
