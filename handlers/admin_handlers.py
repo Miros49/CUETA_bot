@@ -357,90 +357,90 @@ async def send_registrations_list(message: Message):
         await message.answer_document(file)
 
 
-@router.message(F.text == 'предрега')
-async def send_registrations_list(message: Message):
-    event = await db.get_event(event_id=2)
-    registration_type = 'pre-registration'
-    user_ids = await db.get_user_ids_from_registrations(event_id=event.id, registration_type=registration_type)
-
-    print(user_ids)
-
-    for user_id in user_ids:
-        user = await db.get_user(user_id)
-        registration = await db.get_registration(event.id, user_id)
-
-        if not (user.name and user.date_of_birth):
-            try:
-                await bot.send_message(
-                    chat_id=user_id,
-                    text=LEXICON['pre-registration_mailing_no_profile'],
-                    disable_web_page_preview=True
-                )
-
-                pre_registration_message = await bot.send_message(
-                    chat_id=user_id,
-                    text=LEXICON['enter_your_name'],
-                )
-
-                state = get_user_state(user.id)
-                await state.set_state(UserState.sign_in_enter_name)
-                await state.update_data(
-                    registration_message_id=pre_registration_message.message_id,
-                    pre_registration_filling_profile=True
-                )
-                continue
-
-            except Exception as e:
-                await manual_registration(user_id, registration, e)
-                continue
-
-        try:
-            fundraiser = await db.get_fundraiser_with_least_registrations()
-
-            try:
-                await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
-                await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
-                await db.increment_registration_count(fundraiser.id)
-                await db.update_registration_status(registration.id, 'waiting_for_payment')
-
-            except Exception as e:
-                await manual_registration(user_id, registration, e)
-                continue
-
-            print(
-                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id} '
-                f'({("@" + registration.username) if registration.username else registration.user_id})\n'
-                f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
-            )
-
-            await db.set_first_warning(registration.id)
-
-        except Exception as e:
-            await manual_registration(user_id, registration, e)
-            continue
-
-        fundraiser = await db.get_fundraiser(registration.fundraiser_id)
-
-        text = LEXICON['pre-registration_mailing'].format(fundraiser.phone_number, fundraiser.preferred_bank,
-                                                          fundraiser.username) if is_user_adult(user.date_of_birth) \
-            else LEXICON['pre-registration_mailing_underage'].format(
-            fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
-        )
-
-        try:
-            await bot.send_message(
-                chat_id=user_id, text=text,
-                reply_markup=user_kb.register_to_event(event.id, False, True),
-                disable_web_page_preview=True
-            )
-
-        except Exception as e:
-            await manual_registration(user_id, registration, e)
-            continue
-
-        await asyncio.sleep(0.15)  # задержка чтоб не заблокировали
-
-    await message.answer('Готово')
+# @router.message(F.text == 'предрега')
+# async def send_registrations_list(message: Message):
+#     event = await db.get_event(event_id=2)
+#     registration_type = 'pre-registration'
+#     user_ids = await db.get_user_ids_from_registrations(event_id=event.id, registration_type=registration_type)
+#
+#     print(user_ids)
+#
+#     for user_id in user_ids:
+#         user = await db.get_user(user_id)
+#         registration = await db.get_registration(event.id, user_id)
+#
+#         if not (user.name and user.date_of_birth):
+#             try:
+#                 await bot.send_message(
+#                     chat_id=user_id,
+#                     text=LEXICON['pre-registration_mailing_no_profile'],
+#                     disable_web_page_preview=True
+#                 )
+#
+#                 pre_registration_message = await bot.send_message(
+#                     chat_id=user_id,
+#                     text=LEXICON['enter_your_name'],
+#                 )
+#
+#                 state = get_user_state(user.id)
+#                 await state.set_state(UserState.sign_in_enter_name)
+#                 await state.update_data(
+#                     registration_message_id=pre_registration_message.message_id,
+#                     pre_registration_filling_profile=True
+#                 )
+#                 continue
+#
+#             except Exception as e:
+#                 await manual_registration(user_id, registration, e)
+#                 continue
+#
+#         try:
+#             fundraiser = await db.get_fundraiser_with_least_registrations()
+#
+#             try:
+#                 await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
+#                 await db.assign_fundraiser_to_registration(registration.id, fundraiser.id)
+#                 await db.increment_registration_count(fundraiser.id)
+#                 await db.update_registration_status(registration.id, 'waiting_for_payment')
+#
+#             except Exception as e:
+#                 await manual_registration(user_id, registration, e)
+#                 continue
+#
+#             print(
+#                 f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id} '
+#                 f'({("@" + registration.username) if registration.username else registration.user_id})\n'
+#                 f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
+#             )
+#
+#             await db.set_first_warning(registration.id)
+#
+#         except Exception as e:
+#             await manual_registration(user_id, registration, e)
+#             continue
+#
+#         fundraiser = await db.get_fundraiser(registration.fundraiser_id)
+#
+#         text = LEXICON['pre-registration_mailing'].format(fundraiser.phone_number, fundraiser.preferred_bank,
+#                                                           fundraiser.username) if is_user_adult(user.date_of_birth) \
+#             else LEXICON['pre-registration_mailing_underage'].format(
+#             fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+#         )
+#
+#         try:
+#             await bot.send_message(
+#                 chat_id=user_id, text=text,
+#                 reply_markup=user_kb.register_to_event(event.id, False, True),
+#                 disable_web_page_preview=True
+#             )
+#
+#         except Exception as e:
+#             await manual_registration(user_id, registration, e)
+#             continue
+#
+#         await asyncio.sleep(0.15)  # задержка чтоб не заблокировали
+#
+#     await message.answer('Готово')
 
 
 async def manual_registration(user_id: int, registration: Registration, error):
@@ -470,26 +470,62 @@ async def manual_registration(user_id: int, registration: Registration, error):
     return print(f'необходимо лично связаться с типом. ошибка: {error}')
 
 
+# @router.message(F.text == 'рассылка даунам')
+# async def test_handler(message: Message):
+#     users_ids = await db.get_users_with_specific_status_and_warning()
+#     counter = 0
+#
+#     print(len(users_ids), '\n', users_ids)
+#
+#     for user_id in users_ids:
+#         user = await db.get_user(user_id)
+#         registration = await db.get_registration(2, user_id)
+#         fundraiser = await db.get_fundraiser(registration.fundraiser_id)
+#
+#         if is_user_adult(user.date_of_birth):
+#             text = LEXICON['temp_mailing_mexican_party'].format(
+#                 fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+#             )
+#         else:
+#             text = LEXICON['temp_mailing_mexican_party_underage'].format(
+#                 fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+#             )
+#
+#         try:
+#             await bot.send_message(
+#                 chat_id=user_id, text=text,
+#                 reply_markup=user_kb.register_to_event(2, False, True),
+#                 disable_web_page_preview=True
+#             )
+#             counter += 1
+#
+#         except Exception as e:
+#             print(e)
+#
+#         await asyncio.sleep(0.1)
+#
+#     await message.answer(f'Готово!\n{counter} из {len(users_ids)}')
+
+
 @router.message(F.text == 'рассылка даунам')
-async def test_handler(message: Message):
-    users_ids = await db.get_users_with_specific_status_and_warning()
+async def mailing_handler(message: Message):
+    unregistered_users_ids = await db.get_unregistered_users()
+    users_with_unconfirmed_status = await db.get_users_with_unconfirmed_status()
+
+    print(len(unregistered_users_ids), '\n', unregistered_users_ids)
+    print(len(users_with_unconfirmed_status), '\n', users_with_unconfirmed_status)
+    print(len(set(unregistered_users_ids).intersection(set(users_with_unconfirmed_status))))
+
+    users_ids = list(set(unregistered_users_ids) | set(users_with_unconfirmed_status))
     counter = 0
 
-    print(len(users_ids), '\n', users_ids)
-
     for user_id in users_ids:
-        user = await db.get_user(user_id)
-        registration = await db.get_registration(2, user_id)
-        fundraiser = await db.get_fundraiser(registration.fundraiser_id)
-
-        if is_user_adult(user.date_of_birth):
-            text = LEXICON['temp_mailing_mexican_party'].format(
-                fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
-            )
-        else:
-            text = LEXICON['temp_mailing_mexican_party_underage'].format(
-                fundraiser.username, fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
-            )
+        text = (
+            'А ты всё хочешь и молчишь… 🤫\n'
+            'Говорят, повышение цены скоро, а ты так и не купил билет… поторопись! 🎟🔥\n\n'
+            'Отметим сессию 🥳, заведём новые контакты 🤝 и шумно ворвёмся в новый семестр! 🎉\n'
+            'Обещаю, оно того стоит! ✨'
+        )
 
         try:
             await bot.send_message(
@@ -498,10 +534,17 @@ async def test_handler(message: Message):
                 disable_web_page_preview=True
             )
             counter += 1
-        
+
+        except TelegramBadRequest:
+            pass
+
+        except TelegramForbiddenError:
+            pass
+
         except Exception as e:
-            print(e)
-        
+            print(f'Некритическая ошибка при попытке рассылки: {e}')
+            pass
+
         await asyncio.sleep(0.1)
 
     await message.answer(f'Готово!\n{counter} из {len(users_ids)}')
