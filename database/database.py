@@ -298,19 +298,52 @@ class DataBase:
                 else:
                     raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
 
-    async def get_user_ids_from_registrations(self, event_id: int, registration_type: str) -> list[int]:
+    async def get_user_ids_from_registrations(self, event_id: int, registration_type: str, status: str) -> list[int]:
         """
         Возвращает список user_id всех регистраций с указанным типом для конкретного мероприятия.
-        :param registration_type: Тип регистрации (например, 'pre-registration').
         :param event_id: ID мероприятия.
+        :param registration_type: Тип регистрации (например, 'pre-registration').
+        :param status: Статус регистрации.
         :return: Список user_id.
         """
         async with self.async_session() as session:
             async with session.begin():
                 query = select(Registration.user_id).where(
                     (Registration.event_id == event_id) &
+                    (Registration.status == status) &
                     (Registration.registration_type == registration_type)
                 )
+                result = await session.execute(query)
+                return [row[0] for row in result.all()]
+
+    async def get_unregistered_users(self) -> list[int]:
+        """
+        Возвращает список id пользователей, которые ещё не зарегистрированы на мероприятие.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                # Получаем все ID пользователей
+                all_users_query = select(User.id)
+                all_users_result = await session.execute(all_users_query)
+                all_user_ids = set(all_users_result.scalars().all())
+
+                # Получаем ID зарегистрированных пользователей
+                registered_users_query = select(Registration.user_id)
+                registered_users_result = await session.execute(registered_users_query)
+                registered_user_ids = set(registered_users_result.scalars().all())
+
+                # Разница множеств: все - зарегистрированные
+                unregistered_user_ids = list(all_user_ids - registered_user_ids)
+
+                return unregistered_user_ids
+
+    async def get_users_with_unconfirmed_status(self) -> list[int]:
+        """
+        Возвращает список id пользователей, у которых статус регистрации != 'confirmed'.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Registration.user_id).where(Registration.status != 'confirmed')
                 result = await session.execute(query)
                 return [row[0] for row in result.all()]
 

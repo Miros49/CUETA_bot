@@ -124,7 +124,7 @@ async def event_info_handler(callback: CallbackQuery, state: FSMContext):
         photo=event.photo_id,
         caption=LEXICON['event_info'].format(event.description, registration_text),
         reply_markup=kb.register_to_event(event.id, kb_arg, kb_additional_arg)
-    )        
+    )
 
 
 @router.callback_query(F.data.startswith('cancel_registration_beer_pong'))
