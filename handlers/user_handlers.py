@@ -315,7 +315,7 @@ async def send_payment_confirmation_handler(message: Message, state: FSMContext)
             last_payment_confirmation_message_message_id=last_payment_confirmation_message_message_id
         )
 
-    underage_text = '' if not is_user_adult(user.date_of_birth) \
+    underage_text = '' if is_user_adult(user.date_of_birth) \
         else '\n‼️ Необходимо проверить согласие от родителей'
     caption = (
         f'<b>Оплата от {("@" + registration.username) if registration.username else registration.user_id}'
