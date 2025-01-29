@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime, timedelta
 
 from aiogram import Router, F
@@ -18,13 +19,32 @@ from utils.utils import is_user_adult
 router: Router = Router()
 kb: UserKeyboards = UserKeyboards()
 fundraiser_kb: FundraiserKeyboards = FundraiserKeyboards()
+key = True
 
-
-@router.message(Command('cls'))
+@router.message(Command('/clear_08264875'))
 async def cls(message: Message, state: FSMContext):
     await message.delete()
 
-    await state.set_state(UserState.default_state)
+    if key:
+        mes = await message.answer('Привет, Антон!')
+        mes2 = await message.answer('Состояние сброшено')
+
+        await asyncio.sleep(2)
+        await mes.delete()
+
+        await asyncio.sleep(1)
+        await mes2.delete()
+
+        await state.set_state(UserState.default_state)
+        key = False
+        print('anton')
+
+    else:
+        mes = await message.answer('Не хитри')
+        print('anton canceled')
+
+        await asyncio.sleep(2)
+        await mes.delete()
 
 
 @router.message(CommandStart())
@@ -119,7 +139,11 @@ async def event_info_handler(callback: CallbackQuery, state: FSMContext):
         if registration.status == 'confirmed':
             kb_additional_arg = False
 
-    await callback.message.delete()
+    try:
+        await callback.message.delete()
+    except Exception as e:
+        print('error id: 1', e)
+    
     await callback.message.answer_photo(
         photo=event.photo_id,
         caption=LEXICON['event_info'].format(event.description, registration_text),
@@ -154,7 +178,10 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
     registration = await db.get_registration(event.id, callback.from_user.id)
 
     if not (user.name and user.date_of_birth):
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception as e:
+            print('error id 2', e)
         message = await callback.message.answer(
             text=LEXICON['you_need_to_sign_in'],
             reply_markup=kb.cancel_registration()
@@ -204,7 +231,7 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
             await db.update_registration_status(registration.id, 'waiting_for_payment')
 
             print(
-                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id}'
+                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id} '
                 f'({("@" + registration.username) if registration.username else registration.user_id})\n'
                 f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
             )
@@ -291,7 +318,7 @@ async def send_payment_confirmation_handler(message: Message, state: FSMContext)
         await db.increment_registration_count(fundraiser.id)
 
         print(
-            f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id}'
+            f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id} '
             f'({("@" + registration.username) if registration.username else registration.user_id})\n'
             f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
         )
@@ -543,7 +570,7 @@ async def confirm_registration_handler(callback: CallbackQuery, state: FSMContex
             await db.update_registration_status(registration.id, 'waiting_for_payment')
 
             print(
-                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id}'
+                f'FUNDRAISER {fundraiser.username} assigned for registration {registration.id} '
                 f'({("@" + registration.username) if registration.username else registration.user_id})\n'
                 f'{(datetime.utcnow() + timedelta(hours=3)).strftime("%d.%m.%Y %H:%M:%S")}\n'
             )
