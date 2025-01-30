@@ -13,7 +13,8 @@ from filters import IsNotRegistration
 from keyboards import UserKeyboards, FundraiserKeyboards
 from lexicon import LEXICON, buttons, callbacks, status_callback_to_string
 from states import UserState
-from utils import validate_and_format_phone_number, convert_string_to_date, validate_date_of_birth, get_user_state
+from utils import validate_and_format_phone_number, convert_string_to_date, validate_date_of_birth, get_user_state, \
+    convert_date
 from utils.utils import is_user_adult
 
 router: Router = Router()
@@ -197,12 +198,8 @@ async def register_for_the_event_handler(callback: CallbackQuery, state: FSMCont
         )
         return await callback.answer('✅ Вы уже зарегистрированы на данное мероприятие', show_alert=True)
 
-    if 0:
-        additional_text = LEXICON['pre-registration_to_event_confirmed']
-        send_instructions = False
-    else:
-        additional_text = LEXICON['see_payment_instructions_below']
-        send_instructions = True
+    additional_text = LEXICON['see_payment_instructions_below']
+    send_instructions = True
 
     try:
         await callback.message.edit_caption(
@@ -629,8 +626,13 @@ async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
         return await state.update_data(registration_message_id=callback.message_id, show_profile=True)
 
     await callback.message.answer(
-        text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
-        reply_markup=kb.start()
+        text=LEXICON['profile_message'].format(
+            name=user.name,
+            date_of_birth=convert_date(user.date_of_birth),
+            status=user.status,
+            phone_number=user.phone_number
+        ),
+        reply_markup=kb.profile_kb()
     )
 
 
@@ -645,73 +647,6 @@ async def cancel_payment_confirmation_handler(callback: CallbackQuery, state: FS
     await db.update_registration_status(registration.id, 'waiting_for_payment')
 
     await state.set_state(UserState.default_state)
-
-
-# @router.callback_query(F.data.startswith('beer_pong_registration'))
-# async def beer_pong_registration_handler(callback: CallbackQuery):
-#     as_visitor = (callback.data.split('_')[-1] == 'visitor')
-#
-#     event = await db.get_event(BEER_PONG_EVENT_ID)
-#
-#     if as_visitor:
-#         try:
-#             await db.create_registration(BEER_PONG_EVENT_ID, callback.from_user.id)
-#
-#             return await callback.message.edit_text(
-#                 LEXICON['registration_to_event_confirmed'].format(event.name, event.date)
-#             )
-#
-#         except Exception as e:
-#             print(f"\nОшибка при попытке регистрации пользователя {callback.from_user.id}\n{e}\n")
-#             return await callback.message.edit_text(LEXICON['error_occurred'])
-#
-#     elif not await db.check_team_limit():
-#         await callback.answer('К сожалению, места закончились', show_alert=True)
-#         return await callback.message.edit_text(
-#             text=LEXICON['event_info'].format(event.name, event.description, ''),
-#             reply_markup=kb.beer_pong_registration_visitor()
-#         )
-#
-#     await callback.message.edit_text(
-#         text=LEXICON['beer_pong_registration_player'],
-#         reply_markup=kb.beer_pong_registration_player()
-#     )
-#
-#
-# @router.callback_query(F.data.startswith('beer_pong_player'))
-# async def beer_pong_player_handler(callback: CallbackQuery):
-#     if callback.data.split('_')[-1] == 'registration':
-#         invite_link = f'https://t.me/CUETA_events_bot?start=beer_pong_invite_{callback.from_user.id}'
-#
-#         return await callback.message.edit_text(
-#             text=LEXICON['beer_pong_registrate_team'].format(invite_link)
-#         )
-#
-#     try:
-#         team = await db.join_team(callback.from_user.id, callback.from_user.username)
-#         await db.create_registration(BEER_PONG_EVENT_ID, callback.from_user.id)
-#     except Exception as e:
-#         print(f"\nОшибка при попытке инициализации команды на бирпонг:\n{e}\n")
-#         return await callback.message.edit_text(LEXICON['error_occurred'])
-#
-#     if team:
-#         event = await db.get_event(BEER_PONG_EVENT_ID)
-#
-#         await callback.message.edit_text(
-#             LEXICON['beer_pong_team_just_created'].format(event.name, team.player_1_username, team.id)
-#         )
-#
-#         await bot.send_message(
-#             chat_id=team.player_1_id,
-#             text=LEXICON['beer_pong_team_just_created'].format(event.name, callback.from_user.username, team.id)
-#         )
-#
-#     else:
-#         try:
-#             await callback.message.edit_text(LEXICON['beer_pong_solo'])
-#         except Exception as e:
-#             print(e)
-#             await callback.message.edit_text(LEXICON['error_occurred'])
 
 
 @router.message(F.text == buttons['help'])
@@ -732,6 +667,41 @@ async def profile_message_handler(message: Message, state: FSMContext):
         return await state.update_data(registration_message_id=message.message_id, show_profile=True)
 
     await message.answer(
-        text=LEXICON['profile_message'].format(user.name, user.date_of_birth, user.status, user.phone_number),
-        reply_markup=kb.start()
+        text=LEXICON['profile_message'].format(
+            name=user.name,
+            date_of_birth=convert_date(user.date_of_birth),
+            status=user.status,
+            phone_number=user.phone_number
+        ),
+        reply_markup=kb.profile_kb()
     )
+
+
+@router.callback_query(F.data == callbacks['back_to_profile'])
+async def back_to_profile_message_handler(callback: CallbackQuery):
+    user = await db.get_user(callback.from_user.id)
+
+    await callback.message.edit_text(
+        text=LEXICON['profile_message'].format(
+            name=user.name,
+            date_of_birth=convert_date(user.date_of_birth),
+            status=user.status,
+            phone_number=user.phone_number
+        ),
+        reply_markup=kb.profile_kb()
+    )
+
+
+@router.callback_query(F.data == callbacks[buttons['top_up_balance']])
+async def top_up_balance_handler(callback: CallbackQuery):
+    await callback.message.edit_text(LEXICON['top_up_balance_manu'], reply_markup=kb.coins_amount_kb())
+
+
+@router.callback_query(F.data.startswith('top_up_balance_enter_coins_amount_'))
+async def enter_coins_amount_handler(callback: CallbackQuery, state: FSMContext):
+    try:
+        amount = int(callback.data.split('_')[-1])
+    except ValueError:
+        # ввод вручную
+
+    print(amount)

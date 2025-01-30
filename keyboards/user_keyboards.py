@@ -170,49 +170,27 @@ class UserKeyboards:
         return kb.as_markup()
 
     @staticmethod
-    def beer_pong_registration() -> InlineKeyboardMarkup:
+    def profile_kb() -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         kb.add(
-            InlineKeyboardButton(text=buttons['beer_pong_registration_visitor'],
-                                 callback_data=callbacks[buttons['beer_pong_registration_visitor']]),
-            InlineKeyboardButton(text=buttons['beer_pong_registration_player'],
-                                 callback_data=callbacks[buttons['beer_pong_registration_player']])
-        ).adjust(1)
-
-        return kb.as_markup()
-
-    @staticmethod
-    def beer_pong_registration_visitor() -> InlineKeyboardMarkup:
-        kb = InlineKeyboardBuilder()
-        kb.add(
-            InlineKeyboardButton(text=buttons['beer_pong_registration_visitor'],
-                                 callback_data=callbacks[buttons['beer_pong_registration_visitor']])
+            InlineKeyboardButton(text=buttons['top_up_balance'], callback_data=callbacks[buttons['top_up_balance']])
         )
 
         return kb.as_markup()
 
     @staticmethod
-    def beer_pong_registration_player() -> InlineKeyboardMarkup:
+    def coins_amount_kb() -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         kb.add(
-            InlineKeyboardButton(text=buttons['beer_pong_player_team_registration'],
-                                 callback_data=callbacks[buttons['beer_pong_player_team_registration']]),
-            InlineKeyboardButton(text=buttons['beer_pong_player_team_creation'],
-                                 callback_data=callbacks[buttons['beer_pong_player_team_creation']])
-        ).adjust(1)
+            InlineKeyboardButton(text='1', callback_data=callbacks['enter_coins_amount'].format(1)),
+            InlineKeyboardButton(text='3', callback_data=callbacks['enter_coins_amount'].format(3)),
+            InlineKeyboardButton(text='5', callback_data=callbacks['enter_coins_amount'].format(5)),
+            InlineKeyboardButton(text='10', callback_data=callbacks['enter_coins_amount'].format(10)),
+            InlineKeyboardButton(text='Ввести вручную', callback_data=callbacks['enter_coins_amount'].format('manual')),
+            InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['back_to_profile']])
+        ).adjust(2, 2, 1)
 
         return kb.as_markup()
-
-    @staticmethod
-    def beer_pong_cancel_registration_player(role: str) -> InlineKeyboardMarkup:
-        kb = InlineKeyboardBuilder()
-        kb.row(
-            InlineKeyboardButton(text='❌ Отменить регистрацию',
-                                 callback_data=callbacks['cancel_registration_on_beer_pong'].format(role))
-        )
-
-        return kb.as_markup()
-
 
 class FundraiserKeyboards:  # TODO: вынести в отдельный файл
     @staticmethod

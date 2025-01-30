@@ -120,7 +120,7 @@ LEXICON: dict[str, str | list[str]] = {
                                   'Информация и регистрация — по кнопке «📋 Список ближайших мероприятий»',
     'see_payment_instructions_below': '\nДля подтверждения регистрации необходимо осуществить оплату 👇',
     'payment_instructions': '<b>Как купить билет?</b>\n{}'
-                            '{}. <b>Оплатите</b> переводом по номеру: {} ({}).\n'
+                            '{}. <b>Оплатите</b> переводом по номеру: <code>{}</code> ({}).\n'
                             '{}. <b>Подтвердите оплату</b>: нажми на кнопку снизу и пришли чек в чат.\n\n'
                             '<b>Остались вопросы?</b>\n'
                             'Свяжитесь с организатором: @{}\n'
@@ -128,38 +128,17 @@ LEXICON: dict[str, str | list[str]] = {
     'underage_instruction': '1. Пришлите фото или скан <a href="https://docs.google.com/document/'
                             'd/153ABy5ZqApFK3TKiH7Eh_7IHS2m_EsAA/edit?usp=sharing&ouid=100133804037697762729&'
                             'rtpof=true&sd=true">согласия родителей</a> организатору ({})\n',
-    # '': '<b>‼️ Для подтверждения регистрации на <i>{}</i>,'
-    #                                    'необходимо оплатить стоимость билета и <u>пристать чек</u>:\n\n'
-    #                                    '💵 Стоимость: <code>{}</code>₽\n'
-    #                                    '💳 Номер карты: <code>{}</code>\n\n'
-    #                                    '❓ По вопросам оплаты: @{}',
-    'profile_message': '<b>🪪 ФИО: <i>{}</i>\n'
-                       '📆 Дата рождения: <code>{}</code>\n'
-                       '🔹 Статус: {}\n'
-                       '📱 Номер телефона: <code>{}</code></b>',
+    'profile_message': '<b>🪪 ФИО: <i>{name}</i>\n'
+                       '📆 Дата рождения: <code>{date_of_birth}</code>\n'
+                       '🔹 Статус: {status}\n'
+                       '📱 Номер телефона: <code>{phone_number}</code></b>',
 
     'payment_confirmation_text': '<b>Хорошо! Пришлите, пожалуйста, файл или фото подтверждения об оплате:</b>',
     'payment_confirmation_text_again': '<b>Вам необходимо прислать файл или фото подтверждения об оплате.\n'
                                        'Попробуйте ещё раз:</b>',
-
-    'beer_pong_registration_player': 'Скажите текст\nЕсть команда?',
-    'beer_pong_registrate_team': '<b>Отлично! 😎\n'
-                                 'Отправь <a href="{}">эту ссылку</a> своему напарнику для регистрации команды</b>',
-    'beer_pong_solo': '<b>✅ Ты успешно зарегистрирован!\n'
-                      '👀 Уже ищем для тебя напарника!\n'
-                      'Совсем скоро свяжем вас</b>',
-    'beer_pong_team_registered': '<b>✅ Регистрация команды завершена!\n\n'
-                                 'Напарник: @{}\n'
-                                 'Номер команды: <code>{}</code>.\n\n'
-                                 'Скоро свяжемся с тобой по оплате,\n'
-                                 'До встречи на мероприятии! 🤗</b>',
-    'beer_pong_team_just_created': '<b>✅ Мы подобрали для тебя напарника для участия в мероприятии '
-                                   '<u>{}</u> - @{}.\nКоманда зарегистрирована под номером <code>{}</code>.\n'
-                                   'До встречи на мероприятии! 😉</b>',
-    'beer_pong_registration_team_errored': '<b>Кажется, что-то пошло не так... 🤕\n'
-                                           'Пожалуйста, свяжитесь с администрацией для '
-                                           'регистрации команды вручную: @Miros49.\n'
-                                           'Приносим извинения за неудобства</b>',
+    'top_up_balance_manu': 'Сюда сообщение с инфой о ценах\n'
+                           '100 - 1 CUETA Coin\n\n'
+                           'Сколько CUETA Coins хочешь приобрести?',
 
     # ---------------------   ADMIN   --------------------- #
     'admin_menu': '<b>Здравствуйте, {}! 🤗</b>',
@@ -248,14 +227,9 @@ buttons: dict[str, str] = {
     'registration_status_t-bank': 'Сотрудник Т-Банка',
     'registration_status_other': 'Другое',
 
-    # ---------------------   USER   --------------------- #
+    # ---------------------   PAYMENT   --------------------- #
     'payment_confirmation_button': '✅ Скинуть подтверждении оплаты',
-
-    # ---------------------   BeerPong   --------------------- #
-    'beer_pong_registration_visitor': '👀 Приду посмотреть (бесплатно)',
-    'beer_pong_registration_player': '🍺 Буду играть! (1000₽)',
-    'beer_pong_player_team_registration': '🤝 У меня есть напарник',
-    'beer_pong_player_team_creation': '🤚 У меня нет напарника',
+    'top_up_balance': 'Пополнить баланс',
 
     # ---------------------   ADMIN   --------------------- #
     'admin_mailing': '📢 Рассылка',
@@ -289,19 +263,15 @@ callbacks: dict[str, str] = {
     # ---------------------   USER   --------------------- #
     buttons['payment_confirmation_button']: 'send_payment_confirmation_{}',
     'cancel_payment_confirmation_button': 'cancel_payment_confirmation_{}',
+    buttons['top_up_balance']: 'top_up_balance_coins',
+    'enter_coins_amount': 'top_up_balance_enter_coins_amount_{}',
 
     # ---------------------   Back   --------------------- #
     'profile_registration_back_to_name': 'profile_registration_back_to_name',
     'profile_registration_back_to_date_of_birth': 'profile_registration_back_to_date-of-birth',
     'profile_registration_back_to_status': 'profile_registration_back_to_status',
     'profile_registration_back_to_phone_number': 'profile_registration_back_to_phone-number',
-
-    # ---------------------   BeerPong   --------------------- #
-    buttons['beer_pong_registration_visitor']: 'beer_pong_registration_visitor',
-    buttons['beer_pong_registration_player']: 'beer_pong_registration_player',
-    buttons['beer_pong_player_team_registration']: 'beer_pong_player_team_registration',
-    buttons['beer_pong_player_team_creation']: 'beer_pong_player_team_creation',
-    'cancel_registration_on_beer_pong': 'cancel_registration_beer_pong_{}',
+    'back_to_profile': 'back_to_profile_button',
 
     # ---------------------   ADMIN   --------------------- #
     buttons['admin_mailing']: 'admin_mailing',

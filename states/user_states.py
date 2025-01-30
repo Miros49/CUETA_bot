@@ -9,3 +9,5 @@ class UserState(StatesGroup):
     sign_in_enter_phone_number: State = State()
 
     send_payment_confirmation: State = State()
+
+    enter_coins_amount: State = State()

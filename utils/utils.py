@@ -69,6 +69,18 @@ def validate_date_of_birth(date_of_birth: str) -> dict:
     return {'valid': True}
 
 
+def convert_date(us_date: date | str) -> str:
+    """Конвертирует дату из формата YYYY-MM-DD в формат DD.MM.YYYY."""
+    if isinstance(us_date, date):
+        us_date = us_date.strftime("%Y-%m-%d")
+
+    try:
+        year, month, day = us_date.split("-")
+        return f"{day}.{month}.{year}"
+    except ValueError:
+        raise ValueError("Некорректный формат даты. Используйте YYYY-MM-DD или объект date.")
+
+
 def is_user_adult(date_of_birth: date) -> bool:
     """
     Проверяет, исполнилось ли пользователю 18 лет.
