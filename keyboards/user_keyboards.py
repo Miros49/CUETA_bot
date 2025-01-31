@@ -187,10 +187,40 @@ class UserKeyboards:
             InlineKeyboardButton(text='5', callback_data=callbacks['enter_coins_amount'].format(5)),
             InlineKeyboardButton(text='10', callback_data=callbacks['enter_coins_amount'].format(10)),
             InlineKeyboardButton(text='Ввести вручную', callback_data=callbacks['enter_coins_amount'].format('manual')),
-            InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['back_to_profile']])
+            InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks['back_to_profile'])
         ).adjust(2, 2, 1)
 
         return kb.as_markup()
+
+    @staticmethod
+    def back_to_top_up_menu() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.row(InlineKeyboardButton(text=buttons['back_button'], callback_data=callbacks[buttons['top_up_balance']]))
+
+        return kb.as_markup()
+
+    @staticmethod
+    def confirm_transaction(transaction_id: int) -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['payment_confirmation_button'],
+                                 callback_data=callbacks['confirm_transaction'].format(transaction_id)),
+            InlineKeyboardButton(text='❌ Отменить',
+                                 callback_data=callbacks['cancel_transaction'].format(transaction_id)),
+        ).adjust(1)
+
+        return kb.as_markup()
+
+    @staticmethod
+    def cancel_transaction(transaction_id: int) -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text='❌ Отменить',
+                                 callback_data=callbacks['cancel_transaction'].format(transaction_id))
+        )
+
+        return kb.as_markup()
+
 
 class FundraiserKeyboards:  # TODO: вынести в отдельный файл
     @staticmethod
@@ -201,6 +231,18 @@ class FundraiserKeyboards:  # TODO: вынести в отдельный фай�
                 text='✅ Подтвердить', callback_data=f'fundraiser_payment_confirmation_confirm_{registration_id}'),
             InlineKeyboardButton(
                 text='❌ Фигню вкинул', callback_data=f'fundraiser_payment_confirmation_cancel_{registration_id}'),
+        )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def confirm_transaction(transaction_id: int):
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(
+                text='✅ Подтвердить', callback_data=f'fundraiser_transaction_confirmation_confirm_{transaction_id}'),
+            InlineKeyboardButton(
+                text='❌ Фигню вкинул', callback_data=f'fundraiser_transaction_confirmation_cancel_{transaction_id}'),
         )
 
         return kb.as_markup()

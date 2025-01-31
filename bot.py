@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 async def main() -> None:
+    # await db.add_missing_columns()
     await db.create_tables()
 
     dp.include_router(user_handlers.router)

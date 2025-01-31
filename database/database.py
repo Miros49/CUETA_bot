@@ -1,12 +1,12 @@
 import pandas as pd
 
+from datetime import date, datetime, timedelta
 from typing import List
-from sqlalchemy import select, func, case, not_, cast, Date
+from sqlalchemy import select, update, delete, func, case, not_, cast, Date, desc, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import date, datetime, timedelta
 
-from . import User, Event, Registration, BeerPongTeam, FundRaiser
+from . import User, Event, Registration, BeerPongTeam, FundRaiser, Transaction
 
 Base = declarative_base()
 
@@ -75,6 +75,28 @@ class DataBase:
         today = date.today()
         age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
         return age >= 18
+
+    async def update_user_balance(self, user_id: int, amount: float) -> bool:
+        """
+        Изменяет баланс пользователя, добавляя или вычитая указанную сумму.
+
+        :param user_id: ID пользователя
+        :param amount: Сумма для изменения (может быть отрицательной)
+        :return: True, если баланс изменён, иначе False
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    update(User)
+                    .where(User.id == user_id)
+                    .values(balance=User.balance + amount)
+                    .returning(User.id)
+                )
+                result = await session.execute(query)
+                updated_user = result.scalar()
+
+                await session.commit()
+                return updated_user is not None  # True, если обновилось
 
     # # -----------------------------   ADMIN   ----------------------------- #
     #
@@ -607,6 +629,54 @@ class DataBase:
                 else:
                     raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
 
+    async def add_pending_transaction_to_fundraiser(self, fundraiser_id: int) -> None:
+        """
+        Увеличивает pending_transactions на 1.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    update(FundRaiser)
+                    .where(FundRaiser.id == fundraiser_id)
+                    .values(pending_transactions=FundRaiser.pending_transactions + 1)
+                )
+                await session.execute(query)
+                await session.commit()
+
+    async def move_pending_to_left_to_confirm(self, fundraiser_id: int) -> None:
+        """
+        Перемещает 1 транзакцию из pending_transactions в transactions_to_confirm.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    update(FundRaiser)
+                    .where(FundRaiser.id == fundraiser_id)
+                    .values(
+                        pending_transactions=FundRaiser.pending_transactions - 1,
+                        transactions_to_confirm=FundRaiser.transactions_to_confirm + 1
+                    )
+                )
+                await session.execute(query)
+                await session.commit()
+
+    async def move_left_to_confirm_to_confirmed(self, fundraiser_id: int) -> None:
+        """
+        Перемещает 1 транзакцию из transactions_to_confirm в confirmed_transactions.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    update(FundRaiser)
+                    .where(FundRaiser.id == fundraiser_id)
+                    .values(
+                        transactions_to_confirm=FundRaiser.transactions_to_confirm - 1,
+                        confirmed_transactions=FundRaiser.confirmed_transactions + 1
+                    )
+                )
+                await session.execute(query)
+                await session.commit()
+
     async def get_registration_statistics(self) -> dict:
         """
         Считает статистику по регистрациям:
@@ -675,3 +745,141 @@ class DataBase:
                     "overall_statistics": overall_stats,
                     "fundraisers_statistics": fundraiser_stats,
                 }
+
+    # -----------------------------   TRANSACTION   ----------------------------- #
+
+    async def create_transaction(self, user_id: int, amount: float, currency: str, coins_amount: int,
+                                 fundraiser_id: int, status: str) -> int:
+        """
+        Создаёт новую транзакцию и возвращает её ID.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                transaction: Transaction = Transaction(
+                    user_id=user_id,
+                    amount=amount,
+                    currency=currency,
+                    coins_amount=coins_amount,
+                    fundraiser_id=fundraiser_id,
+                    status=status
+                )
+                session.add(transaction)
+                await session.commit()
+
+                return transaction.id
+
+    async def get_transaction_by_id(self, transaction_id: int) -> Transaction | None:
+        """
+        Возвращает транзакцию по ID.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Transaction).where(Transaction.id == transaction_id)
+                result = await session.execute(query)
+
+                return result.scalars().first()
+
+    async def get_last_ready_to_confirm_transaction(self, user_id: int) -> Transaction | None:
+        """
+        Возвращает последнюю (самую новую) транзакцию пользователя со статусом 'pending'.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    select(Transaction)
+                    .where(Transaction.user_id == user_id, Transaction.status == 'ready_to_confirm_transaction')
+                    .order_by(desc(Transaction.created_at))  # Исправлено: теперь desc() вызывается правильно
+                    .limit(1)
+                )
+                result = await session.execute(query)
+
+                return result.scalars().first()
+
+    async def get_user_transactions(self, user_id: int) -> list[Transaction]:
+        """
+        Возвращает список всех транзакций пользователя.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Transaction).where(Transaction.user_id == user_id).order_by(
+                    Transaction.created_at.desc())
+                result = await session.execute(query)
+
+                return list(result.scalars().all())
+
+    async def get_fundraiser_transactions(self, fundraiser_id: int) -> list[Transaction]:
+        """
+        Возвращает список всех транзакций, связанных с конкретным сборщиком.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(Transaction).where(Transaction.fundraiser_id == fundraiser_id).order_by(
+                    Transaction.created_at.desc())
+                result = await session.execute(query)
+
+                return list(result.scalars().all())
+
+    async def update_transaction_status(self, transaction_id: int, new_status: str) -> bool:
+        """
+        Обновляет статус транзакции.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    update(Transaction)
+                    .where(Transaction.id == transaction_id)
+                    .values(status=new_status)
+                    .returning(Transaction.id)  # Возвращает обновлённые строки
+                )
+                result = await session.execute(query)
+                updated_row = result.scalar()  # Получаем первый результат
+
+                await session.commit()
+
+                return updated_row is not None  # True, если строка обновлена
+
+    async def delete_transaction(self, transaction_id: int) -> bool:
+        """
+        Удаляет транзакцию по ID.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = (
+                    delete(Transaction)
+                    .where(Transaction.id == transaction_id)
+                    .returning(Transaction.id)  # Возвращает ID удалённой транзакции
+                )
+                result = await session.execute(query)
+                deleted_row = result.scalar()  # Получаем ID удалённой строки (или None)
+
+                await session.commit()
+
+                return deleted_row is not None  # True, если транзакция удалена
+
+    from sqlalchemy import text
+
+    async def add_missing_columns(self) -> None:
+        """
+        Добавляет недостающие колонки в таблицы users и fundraisers.
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                # Добавляем balance в users
+                await session.execute(text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS balance NUMERIC(10,2) DEFAULT 0;"
+                ))
+
+                # Добавляем pending_transactions в fundraisers
+                await session.execute(text(
+                    "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS pending_transactions INTEGER DEFAULT 0;"
+                ))
+                # Добавляем transactions_to_confirm в fundraisers
+                await session.execute(text(
+                    "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS transactions_to_confirm INTEGER DEFAULT 0;"
+                ))
+                # Добавляем confirmed_transactions в fundraisers
+                await session.execute(text(
+                    "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS confirmed_transactions INTEGER DEFAULT 0;"
+                ))
+
+                await session.commit()

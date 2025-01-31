@@ -11,3 +11,4 @@ class UserState(StatesGroup):
     send_payment_confirmation: State = State()
 
     enter_coins_amount: State = State()
+    send_transaction_confirmation: State = State()

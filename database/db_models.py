@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, BigInteger, Date, Boolean, ForeignKey
+from sqlalchemy import Column, String, Integer, BigInteger, Date, Boolean, Numeric, DateTime, ForeignKey, func
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -13,6 +13,7 @@ class User(Base):
     date_of_birth = Column(Date)
     status = Column(String)
     phone_number = Column(String)
+    balance = Column(Numeric(10, 2), default=0)
 
 
 class Event(Base):
@@ -54,6 +55,24 @@ class FundRaiser(Base):
     number_of_registrations = Column(Integer, nullable=False, default=0)
     waiting_for_verification = Column(Integer, nullable=False, default=0)
     verified = Column(Integer, nullable=False, default=0)
+
+    pending_transactions = Column(Integer, nullable=False, default=0)
+    transactions_to_confirm = Column(Integer, nullable=False, default=0)
+    confirmed_transactions = Column(Integer, nullable=False, default=0)
+
+
+class Transaction(Base):
+    __tablename__ = 'transactions'
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    amount = Column(Numeric(10, 2), nullable=False)
+    currency = Column(String, nullable=False, default='RUB')
+    coins_amount = Column(Integer, nullable=False)
+
+    fundraiser_id = Column(BigInteger, ForeignKey('fundraisers.id'), nullable=False)
+    status = Column(String, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
 
 
 class BeerPongTeam(Base):

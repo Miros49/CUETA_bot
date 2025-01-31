@@ -25,7 +25,7 @@ router.callback_query.filter(IsAdmin())
 
 
 @router.message(Command('admin'))
-async def admin_manu_handler(message: Message, state: FSMContext):
+async def admin_menu_handler(message: Message, state: FSMContext):
     menu_message = LEXICON['admin_menu'].format(message.from_user.first_name)
 
     # Получаем статистику

@@ -8,6 +8,7 @@ from aiogram.filters import StateFilter, CommandStart, Command
 from aiogram.fsm.context import FSMContext
 
 from core import bot, BEER_PONG_EVENT_ID
+from core.config import CUETA_COIN_PRICE
 from database import db
 from filters import IsNotRegistration
 from keyboards import UserKeyboards, FundraiserKeyboards
@@ -20,32 +21,17 @@ from utils.utils import is_user_adult
 router: Router = Router()
 kb: UserKeyboards = UserKeyboards()
 fundraiser_kb: FundraiserKeyboards = FundraiserKeyboards()
-key = True
 
-@router.message(Command('/clear_08264875'))
+
+@router.message(Command('cls'))
 async def cls(message: Message, state: FSMContext):
+    await state.set_state(UserState.default_state)
+
     await message.delete()
 
-    if key:
-        mes = await message.answer('Привет, Антон!')
-        mes2 = await message.answer('Состояние сброшено')
-
-        await asyncio.sleep(2)
-        await mes.delete()
-
-        await asyncio.sleep(1)
-        await mes2.delete()
-
-        await state.set_state(UserState.default_state)
-        key = False
-        print('anton')
-
-    else:
-        mes = await message.answer('Не хитри')
-        print('anton canceled')
-
-        await asyncio.sleep(2)
-        await mes.delete()
+    mes2 = await message.answer('Состояние сброшено')
+    await asyncio.sleep(2)
+    await mes2.delete()
 
 
 @router.message(CommandStart())
@@ -144,7 +130,7 @@ async def event_info_handler(callback: CallbackQuery, state: FSMContext):
         await callback.message.delete()
     except Exception as e:
         print('error id: 1', e)
-    
+
     await callback.message.answer_photo(
         photo=event.photo_id,
         caption=LEXICON['event_info'].format(event.description, registration_text),
@@ -284,8 +270,7 @@ async def send_payment_confirmation(callback: CallbackQuery, state: FSMContext):
             f'статус регистрации: {registration.status}, пользователь: {callback.from_user.id}'
         )
         await state.set_state(UserState.default_state)
-        return await callback.answer(
-            'Что-то пошло не так. Пожалуйста, свяжись с назначенным тебе менеджером, если оплата всё ещё не завершена')
+        return await callback.answer(LEXICON['contact_your_fundraiser'], show_alert=True)
 
     last_payment_confirmation_message_message_id = (
         await callback.message.answer(
@@ -326,7 +311,7 @@ async def send_payment_confirmation_handler(message: Message, state: FSMContext)
             reply_markup=None
         )
     except Exception as e:
-        print(f'фигня с удалением клавиатурыы отмены поддтверждения: {e}')
+        print(f'фигня с удалением клавиатурыы отмены подтверждения: {e}')
 
     if not (message.photo or message.document):
         last_payment_confirmation_message_message_id = (
@@ -630,7 +615,9 @@ async def profile_callback_handler(callback: CallbackQuery, state: FSMContext):
             name=user.name,
             date_of_birth=convert_date(user.date_of_birth),
             status=user.status,
-            phone_number=user.phone_number
+            phone_number=user.phone_number,
+            balance=str(user.balance).rstrip('0').rstrip('.'),
+            s='' if user.balance == 1 else 's'
         ),
         reply_markup=kb.profile_kb()
     )
@@ -671,7 +658,9 @@ async def profile_message_handler(message: Message, state: FSMContext):
             name=user.name,
             date_of_birth=convert_date(user.date_of_birth),
             status=user.status,
-            phone_number=user.phone_number
+            phone_number=user.phone_number,
+            balance=str(user.balance).rstrip('0').rstrip('.'),
+            s='' if user.balance == 1 else 's'
         ),
         reply_markup=kb.profile_kb()
     )
@@ -686,22 +675,206 @@ async def back_to_profile_message_handler(callback: CallbackQuery):
             name=user.name,
             date_of_birth=convert_date(user.date_of_birth),
             status=user.status,
-            phone_number=user.phone_number
+            phone_number=user.phone_number,
+            balance=str(user.balance).rstrip('0').rstrip('.'),
+            s='' if user.balance == 1 else 's'
         ),
         reply_markup=kb.profile_kb()
     )
 
 
 @router.callback_query(F.data == callbacks[buttons['top_up_balance']])
-async def top_up_balance_handler(callback: CallbackQuery):
-    await callback.message.edit_text(LEXICON['top_up_balance_manu'], reply_markup=kb.coins_amount_kb())
+async def top_up_balance_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text(LEXICON['top_up_balance_menu'], reply_markup=kb.coins_amount_kb())
+    await state.set_state(UserState.default_state)
 
 
 @router.callback_query(F.data.startswith('top_up_balance_enter_coins_amount_'))
 async def enter_coins_amount_handler(callback: CallbackQuery, state: FSMContext):
     try:
-        amount = int(callback.data.split('_')[-1])
-    except ValueError:
-        # ввод вручную
+        coins_amount = int(callback.data.split('_')[-1])
 
-    print(amount)
+    except ValueError:
+        top_up_message_message_id = (
+            await callback.message.edit_text(
+                text=LEXICON['top_up_balance_manual_input'], reply_markup=kb.back_to_top_up_menu()
+            )
+        ).message_id
+
+        await state.set_state(UserState.enter_coins_amount)
+        return await state.update_data(top_up_message_message_id=top_up_message_message_id)
+
+    fundraiser = await db.get_fundraiser_with_least_registrations()
+    transaction_id = await db.create_transaction(
+        user_id=callback.from_user.id,
+        amount=coins_amount * CUETA_COIN_PRICE,
+        currency='RUB',
+        coins_amount=coins_amount,
+        fundraiser_id=fundraiser.id,
+        status='pending'
+    )
+    await db.add_pending_transaction_to_fundraiser(fundraiser.id)
+
+    await callback.message.edit_text(
+        text=LEXICON['top_up_balance_instructions'].format(
+            coins_amount, '' if coins_amount == 1 else 's', coins_amount * CUETA_COIN_PRICE,
+            fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+        ), reply_markup=kb.confirm_transaction(transaction_id)
+    )
+
+
+@router.message(StateFilter(UserState.enter_coins_amount))
+async def enter_coins_amount_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+
+    await message.delete()
+
+    try:
+        coins_amount = int(message.text)
+    except ValueError:
+        if data.get('top_up_message_message_id', False):
+            try:
+                return await bot.edit_message_text(
+                    chat_id=message.chat.id, message_id=data['top_up_message_message_id'],
+                    text=LEXICON['top_up_balance_manual_input_again'], reply_markup=kb.back_to_top_up_menu()
+                )
+            except TelegramBadRequest:
+                return
+        return await message.answer(
+            text=LEXICON['top_up_balance_manual_input_again'], reply_markup=kb.back_to_top_up_menu()
+        )
+
+    fundraiser = await db.get_fundraiser_with_least_registrations()
+    transaction_id = await db.create_transaction(
+        user_id=message.from_user.id,
+        amount=coins_amount * CUETA_COIN_PRICE,
+        currency='RUB',
+        coins_amount=coins_amount,
+        fundraiser_id=fundraiser.id,
+        status='pending'
+    )
+    await db.add_pending_transaction_to_fundraiser(fundraiser.id)
+
+    if data.get('top_up_message_message_id', False):
+        await bot.edit_message_text(
+            chat_id=message.chat.id, message_id=data['top_up_message_message_id'],
+            text=LEXICON['top_up_balance_instructions'].format(
+                coins_amount, '' if coins_amount == 1 else 's', coins_amount * CUETA_COIN_PRICE,
+                fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+            ), reply_markup=kb.confirm_transaction(transaction_id)
+        )
+    else:
+        await message.answer(
+            text=LEXICON['top_up_balance_instructions'].format(
+                coins_amount, '' if coins_amount == 1 else 's', coins_amount * CUETA_COIN_PRICE,
+                fundraiser.phone_number, fundraiser.preferred_bank, fundraiser.username
+            ), reply_markup=kb.confirm_transaction(transaction_id)
+        )
+
+    await state.set_state(UserState.default_state)
+    data.pop('top_up_message_message_id', None)
+    await state.update_data(**data)
+
+
+@router.callback_query(F.data.startswith('transaction_confirmation'))
+async def confirm_transaction(callback: CallbackQuery, state: FSMContext):
+    transaction_id = int(callback.data.split('_')[-1])
+    transaction = await db.get_transaction_by_id(transaction_id)
+
+    if callback.data.split('_')[-2] == 'confirm':
+        if transaction.status != 'pending':
+            print(
+                f'\n\nтипок не может скинуть подтверждение транзакции {transaction.id}.\n'
+                f'статус транзакции: {transaction.status}, пользователь: {callback.from_user.id}\n\n'
+            )
+            await state.set_state(UserState.default_state)
+            return await callback.answer(LEXICON['contact_your_fundraiser'], show_alert=True)
+
+        if not await db.update_transaction_status(transaction.id, 'ready_to_confirm_transaction'):
+            await callback.message.edit_text(LEXICON['error_occurred'])
+            #  TODO: функцию, которая будет писать админу в лс
+            return print(
+                f'\n\nFATAL ERROR\nERROR ID 5\nUSER ID: {callback.from_user.id}\nTRANSACTION ID: {transaction.id}')
+
+        await callback.message.edit_reply_markup(reply_markup=None)
+        last_transaction_confirmation_message_message_id = (
+            await callback.message.answer(
+                text=LEXICON['payment_confirmation_text'],
+                reply_markup=kb.cancel_transaction(transaction.id)
+            )
+        ).message_id
+
+        await state.set_state(UserState.send_transaction_confirmation)
+        await state.update_data(
+            last_transaction_confirmation_message_message_id=last_transaction_confirmation_message_message_id
+        )
+
+    else:
+        if transaction.status == 'confirmed':
+            fundraiser = await db.get_fundraiser(transaction.fundraiser_id)
+            await callback.message.edit_text(
+                text=LEXICON['transaction_confirmed_contact_administrator'].format(fundraiser.username)
+            )
+            return print(f'\n\nERRER ID 7\nTRANSACTION ID: {transaction.id}')
+
+        await db.update_transaction_status(transaction.id, 'canceled')
+
+        await callback.answer('✅ Покупка отменена', show_alert=True)
+        await callback.message.edit_reply_markup(reply_markup=None)
+
+        await state.set_state(UserState.default_state)
+
+
+@router.message(StateFilter(UserState.send_transaction_confirmation))
+async def send_transaction_confirmation_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+    user = await db.get_user(message.from_user.id)
+    transaction = await db.get_last_ready_to_confirm_transaction(user.id)
+
+    try:
+        await bot.edit_message_reply_markup(
+            chat_id=message.chat.id, message_id=data['last_transaction_confirmation_message_message_id'],
+            reply_markup=None
+        )
+    except Exception as e:
+        print(f'фигня с удалением клавиатурыы отмены подтверждения транзакции: {e}')
+
+    if not (message.photo or message.document):
+        last_transaction_confirmation_message_message_id = (
+            await message.answer(
+                text=LEXICON['payment_confirmation_text_again'],
+                reply_markup=kb.cancel_transaction(transaction.id)
+            )
+        ).message_id
+
+        return await state.update_data(
+            last_transaction_confirmation_message_message_id=last_transaction_confirmation_message_message_id
+        )
+
+    user_info = ("@" + user.username) if user.username else user.user_id
+
+    if message.photo:
+        await bot.send_photo(
+            chat_id=transaction.fundraiser_id, photo=message.photo[-1].file_id,
+            caption=LEXICON['fundraiser_transaction_confirmation_caption'].format(
+                str(transaction.amount).rstrip('0').rstrip('.'), user_info, transaction.coins_amount
+            ), reply_markup=fundraiser_kb.confirm_transaction(transaction.id)
+        )
+    else:
+        await bot.send_document(
+            chat_id=transaction.fundraiser_id, document=message.document.file_id,
+            caption=LEXICON['fundraiser_transaction_confirmation_caption'].format(
+                str(transaction.amount).rstrip('0').rstrip('.'), user_info, transaction.coins_amount
+            ), reply_markup=fundraiser_kb.confirm_transaction(transaction.id)
+        )
+
+    await db.move_pending_to_left_to_confirm(transaction.fundraiser_id)
+    await db.update_transaction_status(transaction.id, 'waiting_for_fundraiser_confirmation')
+
+    await message.answer(
+        '<b>Отлично! 🔥\n'
+        'Твой чек получен, теперь осталось немного подождать — скоро всё проверим и начислим монеты.'
+        'Свяжемся с тобой в ближайшее время! 😉</b>'
+    )
+
+    await state.set_state(UserState.default_state)

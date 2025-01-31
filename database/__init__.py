@@ -1,4 +1,4 @@
-from .db_models import Base, User, Event, Registration, BeerPongTeam, FundRaiser
+from .db_models import Base, User, Event, Registration, FundRaiser, Transaction, BeerPongTeam
 from .database import DataBase
 
 from core import DATABASE_URL
