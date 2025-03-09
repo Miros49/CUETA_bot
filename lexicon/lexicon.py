@@ -134,6 +134,16 @@ LEXICON: dict[str, str | list[str]] = {
                        '📱 Телефон: <code>{phone_number}</code>\n'
                        '🔖 Статус: {status}\n\n'
                        '💰 Баланс: <code>{balance}</code> CUETA Coin{s}</b>',
+    'change_profile_message': '<b>Выбери, что хочешь поменять:</b>',
+    'change_name_message': '<b>Введи свои ФИО</b>',
+    'change_status_message': '<b>Выбери новый статус 👇</b>',
+    'change_phone_number_message': '<b>Введи новый номер телефона\n'
+                                   'Можешь <i>нажать на кнопку снизу 👇</i>, либо написать его вручную</b>',
+
+    'profile_change_successful': '✅ Успешная смена данных профиля!',
+    'profile_change_failed': '🤕 Произошла ошибка, но мы над ней уже работаем!\n'
+                             'Попробуй ещё раз или обратись за помощью к нам',
+    
     'contact_your_fundraiser': 'Что-то пошло не так. '
                                'Пожалуйста, свяжись с назначенным тебе менеджером, если оплата всё ещё не завершена',
 
@@ -231,6 +241,11 @@ buttons: dict[str, str] = {
     # ---------------------   USER   --------------------- #
     'upcoming_events': '📋 Список ближайших мероприятий',
     'profile': '👤 Профиль',
+    'change_profile': '️✏️ Изменить информацию профиля',
+    'change_name': 'Изменить ФИО',
+    'change_date_of_birth': 'Изменить дату рождения',
+    'change_phone_number': 'Изменить номер телефона',
+    'change_status': 'Изменить статус',
     'help': 'ℹ️ Помощь',
     'back_button': '🔙 Назад',
     'menu': 'Меню',
@@ -267,6 +282,11 @@ callbacks: dict[str, str] = {
     # ---------------------   USER   --------------------- #
     buttons['upcoming_events']: 'events_button',
     buttons['profile']: 'profile_button',
+    buttons['change_profile']: 'change_profile_button',
+    buttons['change_name']: 'change_name_button',
+    buttons['change_date_of_birth']: 'change_date_of_birth_button',
+    buttons['change_phone_number']: 'change_phone_number_button',
+    buttons['change_status']: 'change_status_button',
     buttons['help']: 'help_button',
     buttons['event_registration_pre-registration']: 'register_for_the_event_pre-registration_{}',
     buttons['event_registration_standard']: 'register_for_the_event_standard_{}',

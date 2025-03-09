@@ -173,8 +173,54 @@ class UserKeyboards:
     def profile_kb() -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         kb.add(
-            InlineKeyboardButton(text=buttons['top_up_balance'], callback_data=callbacks[buttons['top_up_balance']])
+            InlineKeyboardButton(text=buttons['top_up_balance'], callback_data=callbacks[buttons['top_up_balance']]),
+            InlineKeyboardButton(text=buttons['change_profile'], callback_data=callbacks[buttons['change_profile']])
+        ).adjust(1, 1)
+
+        return kb.as_markup()
+
+    @staticmethod
+    def change_profile_kb() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['change_name'],
+                                 callback_data=callbacks[buttons['change_name']]),
+            # InlineKeyboardButton(text=buttons['change_date_of_birth'], callback_data=callbacks[buttons['change_date_of_birth']]), # TODO: Смена даты рождения?
+            InlineKeyboardButton(text=buttons['change_phone_number'],
+                                 callback_data=callbacks[buttons['change_phone_number']]),
+            InlineKeyboardButton(text=buttons['change_status'],
+                                 callback_data=callbacks[buttons['change_status']]),
+            InlineKeyboardButton(text=buttons['back_button'],
+                                 callback_data=callbacks['back_to_profile'])
+        ).adjust(1, 1, 1, 1, 1)
+
+        return kb.as_markup()
+
+    @staticmethod
+    def change_name_kb() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['back_button'],
+                                 callback_data=callbacks['back_to_profile'])
         )
+
+        return kb.as_markup()
+
+    @staticmethod
+    def change_status_kb() -> InlineKeyboardMarkup:
+        kb = InlineKeyboardBuilder()
+        kb.add(
+            InlineKeyboardButton(text=buttons['registration_status_bachelor-cu'],
+                                 callback_data=callbacks[buttons['registration_status_bachelor-cu']]),
+            InlineKeyboardButton(text=buttons['registration_status_master-cu'],
+                                 callback_data=callbacks[buttons['registration_status_master-cu']]),
+            # InlineKeyboardButton(text=buttons['registration_status_t-bank'],
+            #                      callback_data=callbacks[buttons['registration_status_t-bank']]),
+            InlineKeyboardButton(text=buttons['registration_status_other'],
+                                 callback_data=callbacks[buttons['registration_status_other']]),
+            InlineKeyboardButton(text=buttons['back_button'],
+                                 callback_data=callbacks['back_to_profile'])
+        ).adjust(2, 1)
 
         return kb.as_markup()
 
