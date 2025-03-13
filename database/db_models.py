@@ -1,11 +1,22 @@
-from sqlalchemy import Column, String, Integer, BigInteger, Date, Boolean, Numeric, DateTime, ForeignKey, func
+from sqlalchemy import (
+    Column,
+    String,
+    Integer,
+    BigInteger,
+    Date,
+    Boolean,
+    Numeric,
+    DateTime,
+    ForeignKey,
+    func,
+)
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = Column(BigInteger, primary_key=True)
     username = Column(String, unique=True)
@@ -17,7 +28,7 @@ class User(Base):
 
 
 class Event(Base):
-    __tablename__ = 'events'
+    __tablename__ = "events"
 
     id = Column(BigInteger, primary_key=True)
     name = Column(String)
@@ -27,12 +38,12 @@ class Event(Base):
 
 
 class Registration(Base):
-    __tablename__ = 'registrations'
+    __tablename__ = "registrations"
 
     id = Column(BigInteger, primary_key=True)
-    event_id = Column(BigInteger, ForeignKey('events.id'))
+    event_id = Column(BigInteger, ForeignKey("events.id"))
 
-    user_id = Column(BigInteger, ForeignKey('users.id'))
+    user_id = Column(BigInteger, ForeignKey("users.id"))
     username = Column(String)
 
     registration_wave = Column(Integer, nullable=False)
@@ -44,7 +55,7 @@ class Registration(Base):
 
 
 class FundRaiser(Base):
-    __tablename__ = 'fundraisers'
+    __tablename__ = "fundraisers"
 
     id = Column(BigInteger, primary_key=True)
     username = Column(String, unique=True)
@@ -62,29 +73,29 @@ class FundRaiser(Base):
 
 
 class Transaction(Base):
-    __tablename__ = 'transactions'
+    __tablename__ = "transactions"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    user_id = Column(BigInteger, ForeignKey('users.id'), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False)
     amount = Column(Numeric(10, 2), nullable=False)
-    currency = Column(String, nullable=False, default='RUB')
+    currency = Column(String, nullable=False, default="RUB")
     coins_amount = Column(Integer, nullable=False)
 
-    fundraiser_id = Column(BigInteger, ForeignKey('fundraisers.id'), nullable=False)
+    fundraiser_id = Column(BigInteger, ForeignKey("fundraisers.id"), nullable=False)
     status = Column(String, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
 
-class BeerPongTeam(Base):
-    __tablename__ = 'beer_pong'
-
-    id = Column(BigInteger, primary_key=True)
-
-    player_1_id = Column(BigInteger, ForeignKey('users.id'))
-    player_1_username = Column(String)
-
-    player_2_id = Column(BigInteger, ForeignKey('users.id'))
-    player_2_username = Column(String)
-
-    status = Column(Boolean)
-    created_manually = Column(Boolean)
+# class BeerPongTeam(Base):
+#     __tablename__ = 'beer_pong'
+#
+#     id = Column(BigInteger, primary_key=True)
+#
+#     player_1_id = Column(BigInteger, ForeignKey('users.id'))
+#     player_1_username = Column(String)
+#
+#     player_2_id = Column(BigInteger, ForeignKey('users.id'))
+#     player_2_username = Column(String)
+#
+#     status = Column(Boolean)
+#     created_manually = Column(Boolean)

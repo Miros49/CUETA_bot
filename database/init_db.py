@@ -12,7 +12,7 @@ def create_database():
     cursor = connection.cursor()
 
     try:
-        cursor.execute('CREATE DATABASE cueta_database')  # Создание базы данных
+        cursor.execute("CREATE DATABASE cueta_database")  # Создание базы данных
         print("База данных создана.")
     except psycopg2.errors.DuplicateDatabase:
         print("База данных уже существует.")

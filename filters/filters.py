@@ -9,7 +9,10 @@ from database import db
 
 class IsAdmin(Filter):
     async def __call__(self, message: Message, *args, **kwargs):
-        return message.from_user.id in config.tg_bot.admin_ids or message.from_user.id in config.tg_bot.admin_ids
+        return (
+            message.from_user.id in config.tg_bot.admin_ids
+            or message.from_user.id in config.tg_bot.admin_ids
+        )
 
 
 class IsNotRegistration(Filter):

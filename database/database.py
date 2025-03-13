@@ -15,7 +15,9 @@ class DataBase:
     def __init__(self, database_url: str):
         self.database_url = database_url
         self.engine = create_async_engine(self.database_url, echo=False)
-        self.async_session = async_sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
+        self.async_session = async_sessionmaker(
+            self.engine, expire_on_commit=False, class_=AsyncSession
+        )
 
     async def create_tables(self):
         async with self.engine.begin() as conn:
@@ -54,7 +56,14 @@ class DataBase:
                 result = await session.execute(query)
                 return [user for user in result.scalars().all()]
 
-    async def set_user(self, user_id: int, name: str, date_of_birth: date, status: str, phone_number: str):
+    async def set_user(
+        self,
+        user_id: int,
+        name: str,
+        date_of_birth: date,
+        status: str,
+        phone_number: str,
+    ):
         async with self.async_session() as session:
             async with session.begin():
                 query = select(User).where(User.id == user_id)
@@ -73,7 +82,11 @@ class DataBase:
         :return: True, если пользователю есть 18 лет, иначе False.
         """
         today = date.today()
-        age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+        age = (
+            today.year
+            - date_of_birth.year
+            - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+        )
         return age >= 18
 
     async def update_user_balance(self, user_id: int, amount: float) -> bool:
@@ -144,15 +157,24 @@ class DataBase:
 
     # -----------------------------   EVENT   ----------------------------- #
 
-    async def create_event(self, name: str, description: str, event_date: date, photo_id: str | None):
+    async def create_event(
+        self, name: str, description: str, event_date: date, photo_id: str | None
+    ):
         all_events = await self.get_upcoming_events()
 
         for event in all_events:  # Check for duplicate event
             if event["name"] == name and event["date"] == event_date:
-                raise ValueError(f'An event with name "{name}" on {event_date} already exists.')
+                raise ValueError(
+                    f'An event with name "{name}" on {event_date} already exists.'
+                )
         async with self.async_session() as session:
             async with session.begin():
-                new_event = Event(name=name, description=description, date=event_date, photo_id=photo_id)
+                new_event = Event(
+                    name=name,
+                    description=description,
+                    date=event_date,
+                    photo_id=photo_id,
+                )
                 session.add(new_event)
                 await session.commit()
 
@@ -178,7 +200,12 @@ class DataBase:
                 events = result.scalars().all()
 
                 return [
-                    {"id": event.id, "name": event.name, "description": event.description, "date": event.date}
+                    {
+                        "id": event.id,
+                        "name": event.name,
+                        "description": event.description,
+                        "date": event.date,
+                    }
                     for event in events
                 ]
 
@@ -196,8 +223,16 @@ class DataBase:
 
     # -----------------------------    Registration   ----------------------------- #
 
-    async def create_registration(self, event_id: int, user_id: int, username: str | None, registration_wave: int,
-                                  registration_type: str, fundraiser_id: int, status: str) -> int:
+    async def create_registration(
+        self,
+        event_id: int,
+        user_id: int,
+        username: str | None,
+        registration_wave: int,
+        registration_type: str,
+        fundraiser_id: int,
+        status: str,
+    ) -> int:
         async with self.async_session() as session:
             async with session.begin():
                 registration: Registration = Registration(
@@ -207,7 +242,7 @@ class DataBase:
                     registration_wave=registration_wave,
                     registration_type=registration_type,
                     fundraiser_id=fundraiser_id,
-                    status=status
+                    status=status,
                 )
                 session.add(registration)
                 await session.commit()
@@ -218,7 +253,8 @@ class DataBase:
         async with self.async_session() as session:
             async with session.begin():
                 query = select(Registration).where(
-                    (Registration.event_id == event_id) & (Registration.user_id == user_id)
+                    (Registration.event_id == event_id)
+                    & (Registration.user_id == user_id)
                 )
                 result = await session.execute(query)
                 registration = result.scalars().first()
@@ -247,7 +283,8 @@ class DataBase:
             async with session.begin():
                 # Запрос на поиск регистрации пользователя для события
                 query = select(Registration).where(
-                    (Registration.event_id == event_id) & (Registration.user_id == user_id)
+                    (Registration.event_id == event_id)
+                    & (Registration.user_id == user_id)
                 )
                 result = await session.execute(query)
                 registration = result.scalars().first()
@@ -287,7 +324,9 @@ class DataBase:
                 else:
                     raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
 
-    async def assign_fundraiser_to_registration(self, registration_id: int, fundraiser_id: int):
+    async def assign_fundraiser_to_registration(
+        self, registration_id: int, fundraiser_id: int
+    ):
         """
         Устанавливает указанный fundraiser_id для конкретной регистрации.
         """
@@ -314,13 +353,17 @@ class DataBase:
                 registration = result.scalars().first()
 
                 if registration:
-                    current_datetime: date = (datetime.utcnow() + timedelta(hours=3)).date()
+                    current_datetime: date = (
+                        datetime.utcnow() + timedelta(hours=3)
+                    ).date()
                     registration.first_warning = current_datetime
                     await session.commit()
                 else:
                     raise ValueError(f"Регистрация с ID {registration_id} не найдена.")
 
-    async def get_user_ids_from_registrations(self, event_id: int, registration_type: str, status: str) -> list[int]:
+    async def get_user_ids_from_registrations(
+        self, event_id: int, registration_type: str, status: str
+    ) -> list[int]:
         """
         Возвращает список user_id всех регистраций с указанным типом для конкретного мероприятия.
         :param event_id: ID мероприятия.
@@ -331,9 +374,9 @@ class DataBase:
         async with self.async_session() as session:
             async with session.begin():
                 query = select(Registration.user_id).where(
-                    (Registration.event_id == event_id) &
-                    (Registration.status == status) &
-                    (Registration.registration_type == registration_type)
+                    (Registration.event_id == event_id)
+                    & (Registration.status == status)
+                    & (Registration.registration_type == registration_type)
                 )
                 result = await session.execute(query)
                 return [row[0] for row in result.all()]
@@ -365,11 +408,15 @@ class DataBase:
         """
         async with self.async_session() as session:
             async with session.begin():
-                query = select(Registration.user_id).where(Registration.status != 'confirmed')
+                query = select(Registration.user_id).where(
+                    Registration.status != "confirmed"
+                )
                 result = await session.execute(query)
                 return [row[0] for row in result.all()]
 
-    async def assign_fundraiser_to_registration(self, registration_id: int, fundraiser_id: int):
+    async def assign_fundraiser_to_registration(
+        self, registration_id: int, fundraiser_id: int
+    ):
         """
         Назначает сборщика для указанной регистрации.
         :param registration_id: ID регистрации, которую нужно обновить.
@@ -389,7 +436,7 @@ class DataBase:
 
     async def get_users_with_specific_status_and_warning(self) -> list[int]:
         """
-        Возвращает список user_id, статус регистрации которых не входит в 
+        Возвращает список user_id, статус регистрации которых не входит в
         ['confirmed', 'waiting_for_fundraiser_confirmation'], а first_warning равен 2025-01-19.
         :return: Список user_id.
         """
@@ -397,26 +444,36 @@ class DataBase:
 
         async with self.async_session() as session:
             async with session.begin():
-                query = (
-                    select(Registration.user_id)
-                    .where(
-                        not_(Registration.status.in_(['confirmed', 'waiting_for_fundraiser_confirmation'])),
-                        cast(Registration.first_warning, Date) == target_date  # Преобразование first_warning в Date
-                    )
+                query = select(Registration.user_id).where(
+                    not_(
+                        Registration.status.in_(
+                            ["confirmed", "waiting_for_fundraiser_confirmation"]
+                        )
+                    ),
+                    cast(Registration.first_warning, Date)
+                    == target_date,  # Преобразование first_warning в Date
                 )
                 result = await session.execute(query)
                 return [row[0] for row in result.all()]
 
     # -----------------------------   BeerPong 25.12.2024   ----------------------------- #
 
-    async def create_team(self, player_1_id: int, player_1_username: str, player_2_id: int,
-                          player_2_username: str) -> int:
+    async def create_team(
+        self,
+        player_1_id: int,
+        player_1_username: str,
+        player_2_id: int,
+        player_2_username: str,
+    ) -> int:
         async with self.async_session() as session:
             async with session.begin():
                 team = BeerPongTeam(
-                    player_1_id=player_1_id, player_1_username=player_1_username,
-                    player_2_id=player_2_id, player_2_username=player_2_username,
-                    status=True, created_manually=True
+                    player_1_id=player_1_id,
+                    player_1_username=player_1_username,
+                    player_2_id=player_2_id,
+                    player_2_username=player_2_username,
+                    status=True,
+                    created_manually=True,
                 )
                 session.add(team)
                 await session.commit()
@@ -432,7 +489,9 @@ class DataBase:
 
                 return count <= 16
 
-    async def join_team(self, player_id: int, player_username: str) -> BeerPongTeam | None:
+    async def join_team(
+        self, player_id: int, player_username: str
+    ) -> BeerPongTeam | None:
         async with self.async_session() as session:
             async with session.begin():
                 # Ищем команду, у которой status равен False
@@ -453,7 +512,7 @@ class DataBase:
                         player_1_id=player_id,
                         player_1_username=player_username,
                         status=False,
-                        created_manually=False
+                        created_manually=False,
                     )
                     session.add(new_team)
                     await session.commit()
@@ -475,7 +534,8 @@ class DataBase:
             async with session.begin():
                 # Запрос на поиск пользователя в качестве player_1 или player_2
                 query = select(BeerPongTeam).where(
-                    (BeerPongTeam.player_1_id == user_id) | (BeerPongTeam.player_2_id == user_id)
+                    (BeerPongTeam.player_1_id == user_id)
+                    | (BeerPongTeam.player_2_id == user_id)
                 )
                 result = await session.execute(query)
                 team = result.scalars().first()
@@ -486,21 +546,24 @@ class DataBase:
         async with self.async_session() as session:
             async with session.begin():
                 # Запрос всех зарегистрированных пользователей на событие
-                query = select(
-                    User.id,
-                    User.username,
-                    User.name,
-                    User.status,
-                    User.phone_number,
-                    User.date_of_birth,
-                    BeerPongTeam.player_1_username,
-                    BeerPongTeam.player_2_username
-                ).join(
-                    Registration, User.id == Registration.user_id
-                ).outerjoin(
-                    BeerPongTeam, (User.id == BeerPongTeam.player_1_id) | (User.id == BeerPongTeam.player_2_id)
-                ).where(
-                    Registration.event_id == event_id
+                query = (
+                    select(
+                        User.id,
+                        User.username,
+                        User.name,
+                        User.status,
+                        User.phone_number,
+                        User.date_of_birth,
+                        BeerPongTeam.player_1_username,
+                        BeerPongTeam.player_2_username,
+                    )
+                    .join(Registration, User.id == Registration.user_id)
+                    .outerjoin(
+                        BeerPongTeam,
+                        (User.id == BeerPongTeam.player_1_id)
+                        | (User.id == BeerPongTeam.player_2_id),
+                    )
+                    .where(Registration.event_id == event_id)
                 )
 
                 result = await session.execute(query)
@@ -508,28 +571,40 @@ class DataBase:
 
                 data = []
                 for row in rows:
-                    user_in_team = row.player_1_username if row.player_1_username == row.username else row.player_2_username
-                    teammate = row.player_2_username if row.player_1_username == row.username else row.player_1_username
+                    user_in_team = (
+                        row.player_1_username
+                        if row.player_1_username == row.username
+                        else row.player_2_username
+                    )
+                    teammate = (
+                        row.player_2_username
+                        if row.player_1_username == row.username
+                        else row.player_1_username
+                    )
 
                     if user_in_team:
-                        data.append({
-                            'Username': f'@{row.username}',
-                            'ФИО': row.name,
-                            'Статус': row.status,
-                            'Номер телефона': row.phone_number,
-                            'Дата рождения': row.date_of_birth,
-                            'Участвует в бир-понге': 'ДА' if user_in_team else 'НЕТ',
-                            'Напарник': teammate if teammate else 'N/A'
-                        })
+                        data.append(
+                            {
+                                "Username": f"@{row.username}",
+                                "ФИО": row.name,
+                                "Статус": row.status,
+                                "Номер телефона": row.phone_number,
+                                "Дата рождения": row.date_of_birth,
+                                "Участвует в бир-понге": "ДА"
+                                if user_in_team
+                                else "НЕТ",
+                                "Напарник": teammate if teammate else "N/A",
+                            }
+                        )
 
                 # Создаем Excel
                 df = pd.DataFrame(data)
-                file_path = f'BeerPong_registrations.xlsx'
+                file_path = f"BeerPong_registrations.xlsx"
                 df.to_excel(file_path, index=False)
 
-                with pd.ExcelWriter(file_path, engine='xlsxwriter') as writer:
-                    df.to_excel(writer, index=False, sheet_name='Registrations')
-                    worksheet = writer.sheets['Registrations']
+                with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+                    df.to_excel(writer, index=False, sheet_name="Registrations")
+                    worksheet = writer.sheets["Registrations"]
 
                     # Автоматическая настройка ширины столбцов
                     for idx, col in enumerate(df.columns):
@@ -591,7 +666,9 @@ class DataBase:
                 else:
                     raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
 
-    async def decrement_registration_and_increment_verification(self, fundraiser_id: int):
+    async def decrement_registration_and_increment_verification(
+        self, fundraiser_id: int
+    ):
         """
         Удаляет одну регистрацию из number_of_registrations и добавляет одну в waiting_for_verification.
         """
@@ -625,7 +702,9 @@ class DataBase:
                         fundraiser.verified += 1
                         await session.commit()
                     else:
-                        raise ValueError("Нет записей в ожидании подтверждения для перемещения.")
+                        raise ValueError(
+                            "Нет записей в ожидании подтверждения для перемещения."
+                        )
                 else:
                     raise ValueError(f"Fundraiser с ID {fundraiser_id} не найден.")
 
@@ -654,7 +733,7 @@ class DataBase:
                     .where(FundRaiser.id == fundraiser_id)
                     .values(
                         pending_transactions=FundRaiser.pending_transactions - 1,
-                        transactions_to_confirm=FundRaiser.transactions_to_confirm + 1
+                        transactions_to_confirm=FundRaiser.transactions_to_confirm + 1,
                     )
                 )
                 await session.execute(query)
@@ -671,7 +750,7 @@ class DataBase:
                     .where(FundRaiser.id == fundraiser_id)
                     .values(
                         transactions_to_confirm=FundRaiser.transactions_to_confirm - 1,
-                        confirmed_transactions=FundRaiser.confirmed_transactions + 1
+                        confirmed_transactions=FundRaiser.confirmed_transactions + 1,
                     )
                 )
                 await session.execute(query)
@@ -687,17 +766,21 @@ class DataBase:
         async with self.async_session() as session:
             async with session.begin():
                 # Общая статистика
-                query_all = select(Registration.status, func.count()).group_by(Registration.status)
+                query_all = select(Registration.status, func.count()).group_by(
+                    Registration.status
+                )
                 result_all = await session.execute(query_all)
                 stats_all = {row[0]: row[1] for row in result_all}
 
                 # Общая статистика с разделением
                 total = sum(stats_all.values())
-                confirmed = stats_all.get('confirmed', 0)
-                waiting_for_confirmation = stats_all.get('waiting_for_fundraiser_confirmation', 0)
-                waiting_for_payment = stats_all.get('waiting_for_payment', 0)
-                ready_to_pay = stats_all.get('ready_to_confirm_payment', 0)
-                processing = stats_all.get('processing', 0)
+                confirmed = stats_all.get("confirmed", 0)
+                waiting_for_confirmation = stats_all.get(
+                    "waiting_for_fundraiser_confirmation", 0
+                )
+                waiting_for_payment = stats_all.get("waiting_for_payment", 0)
+                ready_to_pay = stats_all.get("ready_to_confirm_payment", 0)
+                processing = stats_all.get("processing", 0)
 
                 overall_stats = {
                     "total": total,
@@ -714,13 +797,31 @@ class DataBase:
                         FundRaiser.id,
                         FundRaiser.username,
                         func.count(Registration.id).label("total"),
-                        func.sum(case((Registration.status == 'confirmed', 1), else_=0)).label("confirmed"),
-                        func.sum(case((Registration.status == 'waiting_for_fundraiser_confirmation', 1), else_=0))
-                        .label("waiting_for_confirmation"),
-                        func.sum(case((Registration.status == 'waiting_for_payment', 1), else_=0)).label(
-                            "waiting_for_payment"),
-                        func.sum(case((Registration.status == 'ready_to_confirm_payment', 1), else_=0)).label(
-                            "ready_to_pay"),
+                        func.sum(
+                            case((Registration.status == "confirmed", 1), else_=0)
+                        ).label("confirmed"),
+                        func.sum(
+                            case(
+                                (
+                                    Registration.status
+                                    == "waiting_for_fundraiser_confirmation",
+                                    1,
+                                ),
+                                else_=0,
+                            )
+                        ).label("waiting_for_confirmation"),
+                        func.sum(
+                            case(
+                                (Registration.status == "waiting_for_payment", 1),
+                                else_=0,
+                            )
+                        ).label("waiting_for_payment"),
+                        func.sum(
+                            case(
+                                (Registration.status == "ready_to_confirm_payment", 1),
+                                else_=0,
+                            )
+                        ).label("ready_to_pay"),
                     )
                     .join(Registration, Registration.fundraiser_id == FundRaiser.id)
                     .where(FundRaiser.id != 0)  # Исключение нулевого сборщика
@@ -730,16 +831,18 @@ class DataBase:
                 fundraiser_stats = []
 
                 for row in result_fundraiser:
-                    fundraiser_stats.append({
-                        "fundraiser_id": row.id,
-                        "fundraiser_username": row.username,
-                        "collected_money": row.confirmed * 2000,  # Расчет денег
-                        "total": row.total,
-                        "confirmed": row.confirmed,
-                        "waiting_for_confirmation": row.waiting_for_confirmation,
-                        "waiting_for_payment": row.waiting_for_payment,
-                        "ready_to_pay": row.ready_to_pay,
-                    })
+                    fundraiser_stats.append(
+                        {
+                            "fundraiser_id": row.id,
+                            "fundraiser_username": row.username,
+                            "collected_money": row.confirmed * 2000,  # Расчет денег
+                            "total": row.total,
+                            "confirmed": row.confirmed,
+                            "waiting_for_confirmation": row.waiting_for_confirmation,
+                            "waiting_for_payment": row.waiting_for_payment,
+                            "ready_to_pay": row.ready_to_pay,
+                        }
+                    )
 
                 return {
                     "overall_statistics": overall_stats,
@@ -748,8 +851,15 @@ class DataBase:
 
     # -----------------------------   TRANSACTION   ----------------------------- #
 
-    async def create_transaction(self, user_id: int, amount: float, currency: str, coins_amount: int,
-                                 fundraiser_id: int, status: str) -> int:
+    async def create_transaction(
+        self,
+        user_id: int,
+        amount: float,
+        currency: str,
+        coins_amount: int,
+        fundraiser_id: int,
+        status: str,
+    ) -> int:
         """
         Создаёт новую транзакцию и возвращает её ID.
         """
@@ -761,7 +871,7 @@ class DataBase:
                     currency=currency,
                     coins_amount=coins_amount,
                     fundraiser_id=fundraiser_id,
-                    status=status
+                    status=status,
                 )
                 session.add(transaction)
                 await session.commit()
@@ -779,7 +889,9 @@ class DataBase:
 
                 return result.scalars().first()
 
-    async def get_last_ready_to_confirm_transaction(self, user_id: int) -> Transaction | None:
+    async def get_last_ready_to_confirm_transaction(
+        self, user_id: int
+    ) -> Transaction | None:
         """
         Возвращает последнюю (самую новую) транзакцию пользователя со статусом 'pending'.
         """
@@ -787,8 +899,13 @@ class DataBase:
             async with session.begin():
                 query = (
                     select(Transaction)
-                    .where(Transaction.user_id == user_id, Transaction.status == 'ready_to_confirm_transaction')
-                    .order_by(desc(Transaction.created_at))  # Исправлено: теперь desc() вызывается правильно
+                    .where(
+                        Transaction.user_id == user_id,
+                        Transaction.status == "ready_to_confirm_transaction",
+                    )
+                    .order_by(
+                        desc(Transaction.created_at)
+                    )  # Исправлено: теперь desc() вызывается правильно
                     .limit(1)
                 )
                 result = await session.execute(query)
@@ -801,25 +918,35 @@ class DataBase:
         """
         async with self.async_session() as session:
             async with session.begin():
-                query = select(Transaction).where(Transaction.user_id == user_id).order_by(
-                    Transaction.created_at.desc())
+                query = (
+                    select(Transaction)
+                    .where(Transaction.user_id == user_id)
+                    .order_by(Transaction.created_at.desc())
+                )
                 result = await session.execute(query)
 
                 return list(result.scalars().all())
 
-    async def get_fundraiser_transactions(self, fundraiser_id: int) -> list[Transaction]:
+    async def get_fundraiser_transactions(
+        self, fundraiser_id: int
+    ) -> list[Transaction]:
         """
         Возвращает список всех транзакций, связанных с конкретным сборщиком.
         """
         async with self.async_session() as session:
             async with session.begin():
-                query = select(Transaction).where(Transaction.fundraiser_id == fundraiser_id).order_by(
-                    Transaction.created_at.desc())
+                query = (
+                    select(Transaction)
+                    .where(Transaction.fundraiser_id == fundraiser_id)
+                    .order_by(Transaction.created_at.desc())
+                )
                 result = await session.execute(query)
 
                 return list(result.scalars().all())
 
-    async def update_transaction_status(self, transaction_id: int, new_status: str) -> bool:
+    async def update_transaction_status(
+        self, transaction_id: int, new_status: str
+    ) -> bool:
         """
         Обновляет статус транзакции.
         """
@@ -865,21 +992,29 @@ class DataBase:
         async with self.async_session() as session:
             async with session.begin():
                 # Добавляем balance в users
-                await session.execute(text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS balance NUMERIC(10,2) DEFAULT 0;"
-                ))
+                await session.execute(
+                    text(
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS balance NUMERIC(10,2) DEFAULT 0;"
+                    )
+                )
 
                 # Добавляем pending_transactions в fundraisers
-                await session.execute(text(
-                    "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS pending_transactions INTEGER DEFAULT 0;"
-                ))
+                await session.execute(
+                    text(
+                        "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS pending_transactions INTEGER DEFAULT 0;"
+                    )
+                )
                 # Добавляем transactions_to_confirm в fundraisers
-                await session.execute(text(
-                    "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS transactions_to_confirm INTEGER DEFAULT 0;"
-                ))
+                await session.execute(
+                    text(
+                        "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS transactions_to_confirm INTEGER DEFAULT 0;"
+                    )
+                )
                 # Добавляем confirmed_transactions в fundraisers
-                await session.execute(text(
-                    "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS confirmed_transactions INTEGER DEFAULT 0;"
-                ))
+                await session.execute(
+                    text(
+                        "ALTER TABLE fundraisers ADD COLUMN IF NOT EXISTS confirmed_transactions INTEGER DEFAULT 0;"
+                    )
+                )
 
                 await session.commit()

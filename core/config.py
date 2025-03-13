@@ -33,23 +33,23 @@ def load_config(path: str | None) -> Config:
 
     return Config(
         tg_bot=TgBot(
-            token=env('BOT_TOKEN'),
-            admin_ids=list(map(int, env.list('ADMIN_IDS')))
+            token=env("BOT_TOKEN"), admin_ids=list(map(int, env.list("ADMIN_IDS")))
         ),
         database=DatabaseConfig(
-            name=env('DB_NAME'),
-            host=env('DB_HOST'),
-            user=env('DB_USER'),
-            password=env('DB_PASSWORD'))
+            name=env("DB_NAME"),
+            host=env("DB_HOST"),
+            user=env("DB_USER"),
+            password=env("DB_PASSWORD"),
+        ),
     )
 
 
-config: Config = load_config('.env')
+config: Config = load_config(".env")
 
-default = DefaultBotProperties(parse_mode='HTML')
+default = DefaultBotProperties(parse_mode="HTML")
 bot: Bot = Bot(token=config.tg_bot.token, default=default)
 
-redis = Redis(host='localhost')
+redis = Redis(host="localhost")
 storage = RedisStorage(redis=redis)
 dp: Dispatcher = Dispatcher(storage=storage)
 

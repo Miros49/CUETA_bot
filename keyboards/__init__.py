@@ -1,2 +1,2 @@
-from .user_keyboards import UserKeyboards, FundraiserKeyboards
-from .admin_keyboards import AdminKeyboards
+from keyboards.user_keyboards import UserKeyboards, FundraiserKeyboards
+from keyboards.admin_keyboards import AdminKeyboards
