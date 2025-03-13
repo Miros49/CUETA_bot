@@ -224,15 +224,9 @@ class UserKeyboards:
     def profile_kb() -> InlineKeyboardMarkup:
         kb = InlineKeyboardBuilder()
         kb.add(
-<<<<<<< HEAD
-            InlineKeyboardButton(
-                text=buttons["top_up_balance"],
-                callback_data=callbacks[buttons["top_up_balance"]],
-            )
-=======
-            InlineKeyboardButton(text=buttons['top_up_balance'], callback_data=callbacks[buttons['top_up_balance']]),
+            InlineKeyboardButton(text=buttons["top_up_balance"],callback_data=callbacks[buttons["top_up_balance"]]),
             InlineKeyboardButton(text=buttons['change_profile'], callback_data=callbacks[buttons['change_profile']])
-        ).adjust(1, 1)
+        ).adjust(1)
 
         return kb.as_markup()
 
@@ -249,7 +243,7 @@ class UserKeyboards:
                                  callback_data=callbacks[buttons['change_status']]),
             InlineKeyboardButton(text=buttons['back_button'],
                                  callback_data=callbacks['back_to_profile'])
-        ).adjust(1, 1, 1, 1, 1)
+        ).adjust(1)
 
         return kb.as_markup()
 
@@ -259,7 +253,6 @@ class UserKeyboards:
         kb.add(
             InlineKeyboardButton(text=buttons['back_button'],
                                  callback_data=callbacks['back_to_profile'])
->>>>>>> origin/vlad
         )
 
         return kb.as_markup()

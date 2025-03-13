@@ -6,7 +6,7 @@ from sqlalchemy import select, update, delete, func, case, not_, cast, Date, des
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 
-from . import User, Event, Registration, BeerPongTeam, FundRaiser, Transaction
+from . import User, Event, Registration, FundRaiser, Transaction
 
 Base = declarative_base()
 
@@ -458,160 +458,160 @@ class DataBase:
 
     # -----------------------------   BeerPong 25.12.2024   ----------------------------- #
 
-    async def create_team(
-        self,
-        player_1_id: int,
-        player_1_username: str,
-        player_2_id: int,
-        player_2_username: str,
-    ) -> int:
-        async with self.async_session() as session:
-            async with session.begin():
-                team = BeerPongTeam(
-                    player_1_id=player_1_id,
-                    player_1_username=player_1_username,
-                    player_2_id=player_2_id,
-                    player_2_username=player_2_username,
-                    status=True,
-                    created_manually=True,
-                )
-                session.add(team)
-                await session.commit()
-                return team.id
-
-    async def check_team_limit(self) -> bool:
-        async with self.async_session() as session:
-            async with session.begin():
-                # Считаем количество строк в таблице BeerPongTeam
-                query = select(func.count()).select_from(BeerPongTeam)
-                result = await session.execute(query)
-                count = result.scalar()
-
-                return count <= 16
-
-    async def join_team(
-        self, player_id: int, player_username: str
-    ) -> BeerPongTeam | None:
-        async with self.async_session() as session:
-            async with session.begin():
-                # Ищем команду, у которой status равен False
-                query = select(BeerPongTeam).where(BeerPongTeam.status == False)
-                result = await session.execute(query)
-                team = result.scalars().first()
-
-                if team:
-                    # Если неполная команда найдена, заполняем второго игрока
-                    team.player_2_id = player_id
-                    team.player_2_username = player_username
-                    team.status = True
-                    await session.commit()
-                    return team
-                else:
-                    # Если неполной команды нет, создаём новую с первым игроком
-                    new_team = BeerPongTeam(
-                        player_1_id=player_id,
-                        player_1_username=player_username,
-                        status=False,
-                        created_manually=False,
-                    )
-                    session.add(new_team)
-                    await session.commit()
-                    return None
-
-    async def get_event_registrations(self, event_id: int) -> List[User]:
-        async with self.async_session() as session:
-            async with session.begin():
-                query = select(Registration).where(Registration.event_id == event_id)
-                result = await session.execute(query)
-                return list(set([user.user_id for user in result.scalars().all()]))
-
-    async def is_user_in_team(self, user_id: int) -> bool:
-        """
-        Проверяет, состоит ли пользователь в какой-либо команде.
-        Возвращает True, если пользователь найден в одной из команд.
-        """
-        async with self.async_session() as session:
-            async with session.begin():
-                # Запрос на поиск пользователя в качестве player_1 или player_2
-                query = select(BeerPongTeam).where(
-                    (BeerPongTeam.player_1_id == user_id)
-                    | (BeerPongTeam.player_2_id == user_id)
-                )
-                result = await session.execute(query)
-                team = result.scalars().first()
-
-                return team is not None
-
-    async def generate_registration_report(self, event_id: int) -> str:
-        async with self.async_session() as session:
-            async with session.begin():
-                # Запрос всех зарегистрированных пользователей на событие
-                query = (
-                    select(
-                        User.id,
-                        User.username,
-                        User.name,
-                        User.status,
-                        User.phone_number,
-                        User.date_of_birth,
-                        BeerPongTeam.player_1_username,
-                        BeerPongTeam.player_2_username,
-                    )
-                    .join(Registration, User.id == Registration.user_id)
-                    .outerjoin(
-                        BeerPongTeam,
-                        (User.id == BeerPongTeam.player_1_id)
-                        | (User.id == BeerPongTeam.player_2_id),
-                    )
-                    .where(Registration.event_id == event_id)
-                )
-
-                result = await session.execute(query)
-                rows = result.all()
-
-                data = []
-                for row in rows:
-                    user_in_team = (
-                        row.player_1_username
-                        if row.player_1_username == row.username
-                        else row.player_2_username
-                    )
-                    teammate = (
-                        row.player_2_username
-                        if row.player_1_username == row.username
-                        else row.player_1_username
-                    )
-
-                    if user_in_team:
-                        data.append(
-                            {
-                                "Username": f"@{row.username}",
-                                "ФИО": row.name,
-                                "Статус": row.status,
-                                "Номер телефона": row.phone_number,
-                                "Дата рождения": row.date_of_birth,
-                                "Участвует в бир-понге": "ДА"
-                                if user_in_team
-                                else "НЕТ",
-                                "Напарник": teammate if teammate else "N/A",
-                            }
-                        )
-
-                # Создаем Excel
-                df = pd.DataFrame(data)
-                file_path = f"BeerPong_registrations.xlsx"
-                df.to_excel(file_path, index=False)
-
-                with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
-                    df.to_excel(writer, index=False, sheet_name="Registrations")
-                    worksheet = writer.sheets["Registrations"]
-
-                    # Автоматическая настройка ширины столбцов
-                    for idx, col in enumerate(df.columns):
-                        max_len = df[col].astype(str).map(len).max() + 2
-                        worksheet.set_column(idx, idx, max_len)
-
-                return file_path
+    # async def create_team(
+    #     self,
+    #     player_1_id: int,
+    #     player_1_username: str,
+    #     player_2_id: int,
+    #     player_2_username: str,
+    # ) -> int:
+    #     async with self.async_session() as session:
+    #         async with session.begin():
+    #             team = BeerPongTeam(
+    #                 player_1_id=player_1_id,
+    #                 player_1_username=player_1_username,
+    #                 player_2_id=player_2_id,
+    #                 player_2_username=player_2_username,
+    #                 status=True,
+    #                 created_manually=True,
+    #             )
+    #             session.add(team)
+    #             await session.commit()
+    #             return team.id
+    #
+    # async def check_team_limit(self) -> bool:
+    #     async with self.async_session() as session:
+    #         async with session.begin():
+    #             # Считаем количество строк в таблице BeerPongTeam
+    #             query = select(func.count()).select_from(BeerPongTeam)
+    #             result = await session.execute(query)
+    #             count = result.scalar()
+    #
+    #             return count <= 16
+    #
+    # async def join_team(
+    #     self, player_id: int, player_username: str
+    # ) -> BeerPongTeam | None:
+    #     async with self.async_session() as session:
+    #         async with session.begin():
+    #             # Ищем команду, у которой status равен False
+    #             query = select(BeerPongTeam).where(BeerPongTeam.status == False)
+    #             result = await session.execute(query)
+    #             team = result.scalars().first()
+    #
+    #             if team:
+    #                 # Если неполная команда найдена, заполняем второго игрока
+    #                 team.player_2_id = player_id
+    #                 team.player_2_username = player_username
+    #                 team.status = True
+    #                 await session.commit()
+    #                 return team
+    #             else:
+    #                 # Если неполной команды нет, создаём новую с первым игроком
+    #                 new_team = BeerPongTeam(
+    #                     player_1_id=player_id,
+    #                     player_1_username=player_username,
+    #                     status=False,
+    #                     created_manually=False,
+    #                 )
+    #                 session.add(new_team)
+    #                 await session.commit()
+    #                 return None
+    #
+    # async def get_event_registrations(self, event_id: int) -> List[User]:
+    #     async with self.async_session() as session:
+    #         async with session.begin():
+    #             query = select(Registration).where(Registration.event_id == event_id)
+    #             result = await session.execute(query)
+    #             return list(set([user.user_id for user in result.scalars().all()]))
+    #
+    # async def is_user_in_team(self, user_id: int) -> bool:
+    #     """
+    #     Проверяет, состоит ли пользователь в какой-либо команде.
+    #     Возвращает True, если пользователь найден в одной из команд.
+    #     """
+    #     async with self.async_session() as session:
+    #         async with session.begin():
+    #             # Запрос на поиск пользователя в качестве player_1 или player_2
+    #             query = select(BeerPongTeam).where(
+    #                 (BeerPongTeam.player_1_id == user_id)
+    #                 | (BeerPongTeam.player_2_id == user_id)
+    #             )
+    #             result = await session.execute(query)
+    #             team = result.scalars().first()
+    #
+    #             return team is not None
+    #
+    # async def generate_registration_report(self, event_id: int) -> str:
+    #     async with self.async_session() as session:
+    #         async with session.begin():
+    #             # Запрос всех зарегистрированных пользователей на событие
+    #             query = (
+    #                 select(
+    #                     User.id,
+    #                     User.username,
+    #                     User.name,
+    #                     User.status,
+    #                     User.phone_number,
+    #                     User.date_of_birth,
+    #                     BeerPongTeam.player_1_username,
+    #                     BeerPongTeam.player_2_username,
+    #                 )
+    #                 .join(Registration, User.id == Registration.user_id)
+    #                 .outerjoin(
+    #                     BeerPongTeam,
+    #                     (User.id == BeerPongTeam.player_1_id)
+    #                     | (User.id == BeerPongTeam.player_2_id),
+    #                 )
+    #                 .where(Registration.event_id == event_id)
+    #             )
+    #
+    #             result = await session.execute(query)
+    #             rows = result.all()
+    #
+    #             data = []
+    #             for row in rows:
+    #                 user_in_team = (
+    #                     row.player_1_username
+    #                     if row.player_1_username == row.username
+    #                     else row.player_2_username
+    #                 )
+    #                 teammate = (
+    #                     row.player_2_username
+    #                     if row.player_1_username == row.username
+    #                     else row.player_1_username
+    #                 )
+    #
+    #                 if user_in_team:
+    #                     data.append(
+    #                         {
+    #                             "Username": f"@{row.username}",
+    #                             "ФИО": row.name,
+    #                             "Статус": row.status,
+    #                             "Номер телефона": row.phone_number,
+    #                             "Дата рождения": row.date_of_birth,
+    #                             "Участвует в бир-понге": "ДА"
+    #                             if user_in_team
+    #                             else "НЕТ",
+    #                             "Напарник": teammate if teammate else "N/A",
+    #                         }
+    #                     )
+    #
+    #             # Создаем Excel
+    #             df = pd.DataFrame(data)
+    #             file_path = f"BeerPong_registrations.xlsx"
+    #             df.to_excel(file_path, index=False)
+    #
+    #             with pd.ExcelWriter(file_path, engine="xlsxwriter") as writer:
+    #                 df.to_excel(writer, index=False, sheet_name="Registrations")
+    #                 worksheet = writer.sheets["Registrations"]
+    #
+    #                 # Автоматическая настройка ширины столбцов
+    #                 for idx, col in enumerate(df.columns):
+    #                     max_len = df[col].astype(str).map(len).max() + 2
+    #                     worksheet.set_column(idx, idx, max_len)
+    #
+    #             return file_path
 
     # -----------------------------   FUNDRAISER   ----------------------------- #
 
