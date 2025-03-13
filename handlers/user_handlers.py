@@ -28,7 +28,7 @@ kb: UserKeyboards = UserKeyboards()
 fundraiser_kb: FundraiserKeyboards = FundraiserKeyboards()
 
 
-@router.message(Command("cls"))
+@router.message(Command("clear_fsm_0"))
 async def cls(message: Message, state: FSMContext):
     await state.set_state(UserState.default_state)
 
@@ -42,9 +42,6 @@ async def cls(message: Message, state: FSMContext):
 @router.message(CommandStart())
 async def start(message: Message, state: FSMContext):
     await state.set_state(UserState.default_state)
-
-    if not await db.user_exists(message.from_user.id):
-        await db.init_user(message.from_user.id, message.from_user.username)
 
     await message.answer(LEXICON["start"], reply_markup=kb.start())
 
