@@ -1018,3 +1018,86 @@ class DataBase:
                 )
 
                 await session.commit()
+
+    async def update_user_name(self, user_id: int, new_name: str) -> bool:
+        """
+        Обновляет ФИО пользователя в таблице users
+
+        :param user_id: ID пользователя
+        :param new_name: Новое имя пользователя
+        :return: True, если обновление прошло успешно, иначе False
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(User).where(User.id == user_id)
+                result = await session.execute(query)
+                user = result.scalars().first()
+
+                if user:
+                    user.name = new_name
+                    await session.commit()
+                    return True
+                return False
+
+    async def update_user_status(self, user_id: int, new_status: str) -> bool:
+        """
+        Обновляет статус пользователя в таблице users
+
+        :param user_id: ID пользователя
+        :param new_status: Новый статус пользователя
+        :return: True, если обновление прошло успешно, иначе False
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(User).where(User.id == user_id)
+                result = await session.execute(query)
+                user = result.scalars().first()
+
+                if user:
+                    user.status = new_status
+                    await session.commit()
+                    return True
+                return False
+
+    async def update_user_phone_number(self, user_id: int, new_phone_number: str) -> bool:
+        """
+        Обновляет номер телефона пользователя в таблице users по ID пользователя
+
+        :param user_id: ID пользователя
+        :param new_phone_number: Новый номер телефона пользователя
+        :return: True, если обновление прошло успешно, иначе False
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(User).where(User.id == user_id)
+                result = await session.execute(query)
+                user = result.scalars().first()
+
+                if user:
+                    user.phone_number = new_phone_number
+                    await session.commit()
+                    return True
+                return False
+
+    async def update_user_date_of_birth(self, user_id: int, new_date_of_birth: date) -> bool:
+        """
+        Обновляет дату рождения пользователя в таблице users
+
+        :param user_id: ID пользователя
+        :param new_date_of_birth: Новая дата рождения пользователя
+        :return: True, если обновление прошло успешно, иначе False
+        """
+        async with self.async_session() as session:
+            async with session.begin():
+                query = select(User).where(User.id == user_id)
+                result = await session.execute(query)
+                user = result.scalars().first()
+
+                if user:
+                    if not self.is_user_adult(new_date_of_birth):
+                        raise ValueError("Пользователю должно быть 18 лет или больше.")
+
+                    user.date_of_birth = new_date_of_birth
+                    await session.commit()
+                    return True
+                return False

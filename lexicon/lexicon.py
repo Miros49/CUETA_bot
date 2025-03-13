@@ -150,6 +150,16 @@ LEXICON: dict[str, str | list[str]] = {
     "При возникновении трудностей, свяжитесь с организатором: @{}\n\n",
     "transaction_confirmed_contact_administrator": "Эта транзакция уже подтверждена.\n"
     "Для возврата обратитесь к администратору: @{}",
+    'change_profile_message': '<b>Выбери, что хочешь поменять:</b>',
+    'change_name_message': '<b>Введи свои ФИО</b>',
+    'change_status_message': '<b>Выбери новый статус 👇</b>',
+    'change_phone_number_message': '<b>Введи новый номер телефона\n'
+                                   'Можешь <i>нажать на кнопку снизу 👇</i>, либо написать его вручную</b>',
+
+    'profile_change_successful': '✅ Успешная смена данных профиля!',
+    'profile_change_failed': '🤕 Произошла ошибка, но мы над ней уже работаем!\n'
+                             'Попробуй ещё раз или обратись за помощью к нам',
+
     # -----------------------------   ADMIN   ----------------------------- #
     "admin_menu": "<b>Здравствуйте, {}! 🤗</b>",
     "admin_add_event_name": "<b>Добавление мероприятия</b>\n\n"
@@ -222,22 +232,28 @@ LEXICON: dict[str, str | list[str]] = {
 
 buttons: dict[str, str] = {
     # ---------------------   USER   --------------------- #
-    "upcoming_events": "📋 Список ближайших мероприятий",
-    "profile": "👤 Профиль",
-    "help": "ℹ️ Помощь",
-    "back_button": "🔙 Назад",
-    "menu": "Меню",
-    "back_to_menu": "В меню",
-    "event_registration_pre-registration": "Предрегистрация",
-    "event_registration_standard": "📝 Зарегистрироваться",
-    "event_registration_premium": "Премиум",
-    "event_registration_fast": "⚡️ Фаст-регистрация",
-    "confirm_registration": "✅ Всё верно",
-    "cancel_registration": "❌ Отмена",
-    "registration_status_bachelor-cu": "Бакалавр ЦУ",
-    "registration_status_master-cu": "Магистрант ЦУ",
-    "registration_status_t-bank": "Сотрудник Т-Банка",
-    "registration_status_other": "Другое",
+    'upcoming_events': '📋 Список ближайших мероприятий',
+    'profile': '👤 Профиль',
+    'change_profile': '️✏️ Изменить информацию профиля',
+    'change_name': 'Изменить ФИО',
+    'change_date_of_birth': 'Изменить дату рождения',
+    'change_phone_number': 'Изменить номер телефона',
+    'change_status': 'Изменить статус',
+    'help': 'ℹ️ Помощь',
+    'back_button': '🔙 Назад',
+    'menu': 'Меню',
+    'back_to_menu': 'В меню',
+    'event_registration_pre-registration': 'Предрегистрация',
+    'event_registration_standard': '📝 Зарегистрироваться',
+    'event_registration_premium': 'Премиум',
+    'event_registration_fast': '⚡️ Фаст-регистрация',
+    'confirm_registration': '✅ Всё верно',
+    'cancel_registration': '❌ Отмена',
+    'registration_status_bachelor-cu': 'Бакалавр ЦУ',
+    'registration_status_master-cu': 'Магистрант ЦУ',
+    'registration_status_t-bank': 'Сотрудник Т-Банка',
+    'registration_status_other': 'Другое',
+
     # ---------------------   PAYMENT   --------------------- #
     "payment_confirmation_button": "✅ Скинуть подтверждении оплаты",
     "top_up_balance": "➕💰 Пополнить баланс",
@@ -255,7 +271,9 @@ buttons: dict[str, str] = {
 }
 
 callbacks: dict[str, str] = {
+
     # ---------------------   USER   --------------------- #
+
     buttons["upcoming_events"]: "events_button",
     buttons["profile"]: "profile_button",
     buttons["help"]: "help_button",
@@ -271,20 +289,26 @@ callbacks: dict[str, str] = {
     buttons["registration_status_master-cu"]: "registration_status_master-cu",
     buttons["registration_status_t-bank"]: "registration_status_t-bank",
     buttons["registration_status_other"]: "registration_status_other",
+
     # ---------------------   USER   --------------------- #
+
     buttons["payment_confirmation_button"]: "send_payment_confirmation_{}",
     "cancel_payment_confirmation_button": "cancel_payment_confirmation_{}",
     buttons["top_up_balance"]: "top_up_balance_coins",
     "enter_coins_amount": "top_up_balance_enter_coins_amount_{}",
     "confirm_transaction": "transaction_confirmation_confirm_{}",
     "cancel_transaction": "transaction_confirmation_cancel_{}",
+
     # ---------------------   Back   --------------------- #
+
     "profile_registration_back_to_name": "profile_registration_back_to_name",
     "profile_registration_back_to_date_of_birth": "profile_registration_back_to_date-of-birth",
     "profile_registration_back_to_status": "profile_registration_back_to_status",
     "profile_registration_back_to_phone_number": "profile_registration_back_to_phone-number",
     "back_to_profile": "back_to_profile_button",
+
     # ---------------------   ADMIN   --------------------- #
+
     buttons["admin_mailing"]: "admin_mailing",
     buttons["admin_events"]: "admin_events",
     buttons["admin_back_to_menu"]: "admin_main_menu",

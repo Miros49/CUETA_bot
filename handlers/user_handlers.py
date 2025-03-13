@@ -616,8 +616,17 @@ async def profile_registration_back_to_callback(
 async def confirm_registration_handler(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
 
-    if callback.data.split("_")[-1] == "canceled":
-        await callback.message.edit_text("<b>✅ Регистрация отменена</b>")
+    if callback.data.split('_')[-1] == 'canceled':
+        if state.get_state() in {
+            UserState.sign_in_enter_name,
+                                 UserState.sign_in_enter_date_of_birth,
+                                 UserState.sign_in_enter_status,
+                                 UserState.sign_in_enter_phone_number
+        }:
+            await callback.message.edit_text('<b>✅ Регистрация отменена</b>')
+        else:
+            await callback.message.edit_text('<b>✅ Изменение профиля отменено</b>')
+
         return await state.set_state(UserState.default_state)
 
     date_of_birth = await convert_string_to_date(data["date_of_birth"])
@@ -786,9 +795,183 @@ async def profile_message_handler(message: Message, state: FSMContext):
     )
 
 
-@router.callback_query(F.data == callbacks["back_to_profile"])
-async def back_to_profile_message_handler(callback: CallbackQuery):
+@router.callback_query(F.data == callbacks[buttons['change_profile']])
+async def change_profile_handler(callback: CallbackQuery, state: FSMContext):
+    await callback.message.answer(
+        text=LEXICON['change_profile_message'],
+        reply_markup=kb.change_profile_kb()
+    )
+
+
+@router.callback_query(F.data == callbacks[buttons['change_name']])
+async def change_name_handler(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(UserState.change_profile_enter_name)
+
+    bot_message = await callback.message.answer(
+        text=LEXICON['change_name_message'],
+        reply_markup=kb.change_name_kb()
+    )
+
+    await state.update_data(bot_message_id=bot_message.message_id)
+
+
+@router.message(StateFilter(UserState.change_profile_enter_name))
+async def change_profile_enter_name_handler(message: Message, state: FSMContext):
+    new_name = message.text
+
+    data = await state.get_data()
+    bot_message_id = data.get("bot_message_id")
+
+    await message.delete()
+
+    if len(new_name.split()) != 3:
+        try:
+            if bot_message_id:
+                await message.bot.delete_message(chat_id=message.chat.id, message_id=bot_message_id)
+            return await message.answer(
+                text=LEXICON['sign_in_enter_name_again'],  # TODO: кнопку, если нет отчества
+                reply_markup=kb.cancel_registration()
+            )
+        except TelegramBadRequest:
+            return
+
+    update_result = await db.update_user_name(
+        user_id=message.from_user.id,
+        new_name=new_name,
+    )
+
+    if update_result:
+        await message.answer(
+            text=LEXICON['profile_change_successful']
+        )
+    else:
+        await message.answer(
+            text=LEXICON['profile_change_failed']
+        )
+
+    await state.set_state(UserState.default_state)
+    return await profile_message_handler(message, state)
+
+
+@router.callback_query(F.data == callbacks[buttons['change_status']])
+async def change_status_handler(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(UserState.change_profile_enter_status)
+
+    bot_message = await callback.message.answer(
+        text=LEXICON['change_status_message'],
+        reply_markup=kb.change_status_kb()
+    )
+
+    await state.update_data(bot_message_id=bot_message.message_id)
+
+
+@router.callback_query(
+    F.data.in_([
+        callbacks[buttons['registration_status_bachelor-cu']], callbacks[buttons['registration_status_master-cu']],
+        callbacks[buttons['registration_status_other']], callbacks[buttons['registration_status_t-bank']]]),
+    StateFilter(UserState.change_profile_enter_status)
+)
+async def change_profile_enter_status_handler(callback: CallbackQuery, state: FSMContext):
+    status = status_callback_to_string.get(callback.data, 'unknown')
+    data = await state.get_data()
     user = await db.get_user(callback.from_user.id)
+    print(callback.message.from_user.id)
+
+    await state.set_state(UserState.default_state)
+
+    bot_message_id = data.get("bot_message_id")
+    if bot_message_id:
+        await callback.message.bot.delete_message(chat_id=callback.message.chat.id, message_id=bot_message_id)
+
+    update_result = await db.update_user_status(
+        callback.from_user.id,
+        new_status=status
+    )
+
+    if update_result:
+        await callback.message.answer(
+            text=LEXICON['profile_change_successful']
+        )
+    else:
+        await callback.message.answer(
+            text=LEXICON['profile_change_failed']
+        )
+
+    await state.set_state(UserState.default_state)
+
+    await callback.message.answer(
+        text=LEXICON['profile_message'].format(
+            name=user.name,
+            date_of_birth=convert_date(user.date_of_birth),
+            status=user.status,
+            phone_number=user.phone_number,
+            balance=str(user.balance).rstrip('0').rstrip('.'),
+            s='' if user.balance == 1 else 's'
+        ),
+        reply_markup=kb.profile_kb()
+    )
+
+
+@router.callback_query(F.data == callbacks[buttons['change_phone_number']])
+async def change_phone_number_handler(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(UserState.change_profile_enter_phone_number)
+
+    bot_message = await callback.message.answer(
+        text=LEXICON['sign_in_enter_phone_number_additional'],
+        reply_markup=kb.request_phone_number()
+    )
+
+    await state.update_data(bot_message_id=bot_message.message_id)
+
+@router.message(StateFilter(UserState.change_profile_enter_phone_number))
+async def change_profile_enter_phone_number_handler(message: Message, state: FSMContext):
+    data = await state.get_data()
+    await message.delete()
+
+    new_phone_number = await validate_and_format_phone_number(
+        message.contact.phone_number if message.contact else message.text)
+
+    bot_message_id = data.get("bot_message_id")
+    if bot_message_id:
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=bot_message_id)
+
+    if not new_phone_number['valid']:
+        try:
+            await message.answer(
+                text=LEXICON['sign_in_enter_phone_number_again'].format(new_phone_number['reason'])
+            )
+            bot_message = await message.answer(
+                text=LEXICON['sign_in_enter_phone_number_additional'],
+                reply_markup=kb.request_phone_number()
+            )
+
+            return await state.update_data(bot_message_id=bot_message.message_id)
+        except TelegramBadRequest:
+            return
+
+    update_result = await db.update_user_phone_number(
+        user_id=message.from_user.id,
+        new_phone_number=new_phone_number['formatted']
+    )
+
+    if update_result:
+        await message.answer(
+            text=LEXICON['profile_change_successful']
+        )
+    else:
+        await message.answer(
+            text=LEXICON['profile_change_failed']
+        )
+
+    await state.set_state(UserState.default_state)
+    return await profile_message_handler(message, state)
+
+
+@router.callback_query(F.data == callbacks['back_to_profile'])
+async def back_to_profile_message_handler(callback: CallbackQuery, state: FSMContext):
+    user = await db.get_user(callback.from_user.id)
+
+    await state.set_state(UserState.default_state)
 
     await callback.message.edit_text(
         text=LEXICON["profile_message"].format(
@@ -989,7 +1172,7 @@ async def send_transaction_confirmation_handler(message: Message, state: FSMCont
             reply_markup=None,
         )
     except Exception as e:
-        print(f"фигня с удалением клавиатурыы отмены подтверждения транзакции: {e}")
+        print(f'фигня с удалением клавиатуры отмены подтверждения транзакции: {e}')
 
     if not (message.photo or message.document):
         last_transaction_confirmation_message_message_id = (
